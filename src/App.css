@@ -1,0 +1,286 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
+
+:root{
+  --green: #B9FF66;
+  --greenBorder: #9FE84B;
+  --text: #141414;
+  --muted: #6f6f6f;
+  --border: #e9e9e9;
+}
+
+/* HARD RESET */
+*{ box-sizing:border-box; }
+html, body { height: 100%; }
+body{
+  margin:0;
+  font-family: "Poppins", system-ui, sans-serif;
+  font-size: 16px; /* ✅ BIGGER BASE FONT */
+  color: var(--text);
+  background:#fff;
+}
+
+/* Smoothness */
+a, button, input{
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background-color .18s ease;
+}
+
+/* PAGE */
+.page{ min-height:100vh; }
+
+/* NAVBAR */
+.nav{
+  height:64px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 0 36px;
+  border-bottom: 1px solid var(--border);
+  background:#fff;
+}
+
+.navBrand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.brandIcon{
+  font-size:22px;
+  font-weight:800;
+  color:#7cdc3b;
+}
+.brandText{
+  font-size:18px;
+  font-weight:800; /* ✅ BOLDER LOGO */
+}
+
+.navLinks{
+  display:flex;
+  gap:26px;
+  font-size:14px;   /* ✅ BIGGER NAV LINKS */
+  font-weight:600;
+}
+
+.navLink{
+  color:#1c1c1c;
+  text-decoration:none;
+}
+.navLink:hover{ opacity:.7; }
+
+.navBtns{
+  display:flex;
+  gap: 6px; /* ✅ LOGIN + SIGNUP CLOSER */
+  align-items:center;
+}
+
+.navLoginBtn{
+  height:30px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--greenBorder);
+  background: linear-gradient(180deg, #C9FF86, var(--green));
+  font-size: 13px;
+  font-weight: 800;
+  cursor:pointer;
+  box-shadow: 0 10px 22px rgba(185,255,102,.40);
+}
+.navLoginBtn:hover{
+  transform: translateY(-1px);
+  box-shadow: 0 16px 30px rgba(185,255,102,.52);
+}
+
+.navSignBtn{
+  height:30px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background:#fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor:pointer;
+}
+.navSignBtn:hover{ transform: translateY(-1px); }
+
+/* CONTENT LAYOUT */
+.content{
+  display:flex;
+  justify-content:space-between;
+  gap:60px;
+  padding: 70px 90px 40px;
+  align-items:flex-start;
+}
+
+/* LEFT BOX */
+.loginBox{
+  width: 420px; /* ✅ slightly wider like reference */
+  margin-top: 18px;
+  animation: slideIn .55s cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes slideIn{
+  from { opacity:0; transform: translateY(10px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+.welcomeTitle{
+  margin:0 0 14px;
+  font-size: 34px;     /* ✅ BIGGER TITLE */
+  font-weight: 900;
+  letter-spacing: .26em;
+}
+
+.welcomeSub{
+  margin:0 0 26px;
+  font-size: 15px;     /* ✅ BIGGER SUBTITLE */
+  color: var(--muted);
+}
+
+/* FORM - tighter spacing */
+.form{
+  display:flex;
+  flex-direction:column;
+  gap: 6px; /* ✅ makes Email + Password closer */
+}
+
+.label{
+  font-size: 14px;   /* ✅ BIGGER LABEL */
+  font-weight: 800;
+  margin-top: 10px;
+}
+
+/* Fancy input wrapper effect */
+.inputWrap{
+  position: relative;
+}
+
+.input{
+  width: 100%;
+  height: 48px;            /* ✅ BIGGER INPUT */
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+  background:#fff;
+  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+}
+
+/* ✅ nicer typing feel: glow + lift */
+.input:focus{
+  border-color: var(--greenBorder);
+  box-shadow: 0 0 0 4px rgba(185,255,102,.28), 0 14px 25px rgba(0,0,0,.06);
+  transform: translateY(-1px);
+}
+
+/* ✅ "plain typing" fix: subtle animated underline */
+.inputWrap::after{
+  content:"";
+  position:absolute;
+  left:12px;
+  right:12px;
+  bottom:8px;
+  height:2px;
+  background: rgba(185,255,102,.0);
+  transform: scaleX(0);
+  transform-origin:left;
+  transition:.22s ease;
+}
+.inputWrap:focus-within::after{
+  background: rgba(185,255,102,.9);
+  transform: scaleX(1);
+}
+
+.row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  font-size: 13px;  /* ✅ BIGGER */
+  margin-top: 8px;
+}
+
+.remember{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.forgot{
+  color:#1e1e1e;
+  font-weight:700;
+  text-decoration:none;
+}
+.forgot:hover{ text-decoration:underline; }
+
+/* BUTTONS */
+.btnLogin{
+  margin-top: 14px;
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--greenBorder);
+  background: linear-gradient(180deg, #C9FF86, var(--green));
+  font-size: 14px;
+  font-weight: 900;
+  cursor:pointer;
+  box-shadow: 0 14px 26px rgba(185,255,102,.42);
+}
+.btnLogin:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 18px 34px rgba(185,255,102,.55);
+}
+
+/* Google area */
+.googleArea{
+  margin-top: 12px;
+  display:flex;
+  justify-content:flex-start;
+}
+
+/* Bottom text */
+.bottom{
+  margin: 14px 0 0;
+  font-size: 13px; /* ✅ BIGGER */
+  color: var(--muted);
+}
+.bottom a{
+  color:#111;
+  font-weight:800;
+  text-decoration:none;
+}
+.bottom a:hover{ text-decoration:underline; }
+
+/* HERO */
+.hero{
+  flex:1;
+  display:flex;
+  justify-content:flex-end;
+  align-items:flex-start;
+}
+.heroImg{
+  width: min(900px, 62vw);
+  height:auto;
+  display:block;
+  animation: fadeUp .65s cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes fadeUp{
+  from { opacity:0; transform: translateY(12px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 1000px){
+  .content{
+    flex-direction:column;
+    padding: 40px 18px;
+    align-items:center;
+  }
+  .hero{
+    justify-content:center;
+    width:100%;
+  }
+  .heroImg{
+    width: min(820px, 92vw);
+  }
+  .navLinks{ display:none; }
+  .loginBox{ width: min(460px, 92vw); }
+}

@@ -1,0 +1,393 @@
+import React, { useEffect, useMemo, useRef, useState } from "react";
+
+/* ===================== THEME ===================== */
+const CHECKIN_GREEN = "#B9FF66";
+const TEXT_MAIN = "#141414";
+
+/* ===================== UTILS ===================== */
+function cx(...a) {
+  return a.filter(Boolean).join(" ");
+}
+
+/**
+ * Props:
+ * - open: boolean
+ * - onClose: fn
+ * - threads: Thread[]
+ * - onSendMessage: ({ threadId, text }) => Promise
+ */
+export default function MessagesDrawer({
+  open,
+  onClose,
+  threads = [],
+  onSendMessage,
+}) {
+  const [view, setView] = useState("list"); // list | chat
+  const [activeId, setActiveId] = useState("");
+  const [draft, setDraft] = useState("");
+
+  const activeThread = useMemo(
+    () => threads.find((t) => t.id === activeId) || null,
+    [threads, activeId]
+  );
+
+  /* Reset when opened */
+  useEffect(() => {
+    if (open) {
+      setView("list");
+      setDraft("");
+      setActiveId("");
+    }
+  }, [open]);
+
+  /* Auto scroll */
+  const bottomRef = useRef(null);
+  useEffect(() => {
+    if (view === "chat") {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [view, activeThread?.messages?.length]);
+
+  if (!open) return null;
+
+  const unreadTotal = threads.reduce((s, t) => s + (t.unread || 0), 0);
+
+  const send = async () => {
+    const text = draft.trim();
+    if (!text || !activeThread) return;
+
+    setDraft("");
+    await onSendMessage({ threadId: activeThread.id, text });
+  };
+
+  return (
+    <>
+      {/* Overlay */}
+      <div style={styles.overlay} onClick={onClose} />
+
+      {/* Drawer */}
+      <div style={styles.drawer}>
+        {/* Header */}
+        <div style={styles.header}>
+          {view === "chat" ? (
+            <button style={styles.iconBtn} onClick={() => setView("list")}>
+              ←
+            </button>
+          ) : (
+            <span style={{ width: 36 }} />
+          )}
+
+          <div style={styles.headerCenter}>
+            {view === "list" ? (
+              <div style={styles.headerTitleRow}>
+                <span style={styles.headerTitle}>Messages</span>
+                {unreadTotal > 0 && (
+                  <span style={styles.badge}>{unreadTotal}</span>
+                )}
+              </div>
+            ) : (
+              <>
+                <div style={styles.chatName}>{activeThread?.name}</div>
+                <div style={styles.chatSub}>
+                  {activeThread?.subtitle || "Guidance Counselor"}
+                </div>
+              </>
+            )}
+          </div>
+
+          <button style={styles.iconBtn} onClick={onClose}>
+            ✕
+          </button>
+        </div>
+
+        {/* Body */}
+        {view === "list" ? (
+          <div style={styles.list}>
+            {threads.map((t) => (
+              <button
+                key={t.id}
+                style={styles.thread}
+                onClick={() => {
+                  setActiveId(t.id);
+                  setView("chat");
+                }}
+              >
+                <img
+                  src={t.avatarUrl}
+                  alt=""
+                  style={styles.avatar}
+                />
+
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={styles.threadTop}>
+                    <span style={styles.threadName}>{t.name}</span>
+                    <span style={styles.threadTime}>{t.lastTime}</span>
+                  </div>
+
+                  <div style={styles.threadBottom}>
+                    <span style={styles.threadLast}>{t.lastMessage}</span>
+                    {t.unread > 0 && <span style={styles.unreadDot} />}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={styles.chatWrap}>
+            <div style={styles.chatBody}>
+              {activeThread?.messages?.map((m) => (
+                <div
+                  key={m.id}
+                  style={{
+                    display: "flex",
+                    justifyContent:
+                      m.from === "me" ? "flex-end" : "flex-start",
+                    marginBottom: 10,
+                  }}
+                >
+                  <div
+                    style={{
+                      ...styles.bubble,
+                      ...(m.from === "me"
+                        ? styles.bubbleMe
+                        : styles.bubbleThem),
+                    }}
+                  >
+                    <div style={styles.bubbleText}>{m.text}</div>
+                    <div style={styles.bubbleTime}>{m.time}</div>
+                  </div>
+                </div>
+              ))}
+              <div ref={bottomRef} />
+            </div>
+
+            {/* Input */}
+            <div style={styles.inputBar}>
+              <input
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && send()}
+                placeholder="Message…"
+                style={styles.input}
+              />
+              <button
+                style={cx(
+                  styles.sendBtn,
+                  !draft.trim() && styles.sendDisabled
+                )}
+                onClick={send}
+                disabled={!draft.trim()}
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ===================== STYLES ===================== */
+const styles = {
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(0,0,0,0.35)",
+    zIndex: 9998,
+  },
+  drawer: {
+    position: "fixed",
+    left: 18,
+    bottom: 18,
+    width: 360,
+    height: 560,
+    borderRadius: 22,
+    background: "rgba(20,20,20,0.95)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
+    display: "flex",
+    flexDirection: "column",
+    zIndex: 9999,
+  },
+  header: {
+    padding: 12,
+    display: "grid",
+    gridTemplateColumns: "36px 1fr 36px",
+    alignItems: "center",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+  },
+  headerCenter: { textAlign: "center" },
+  headerTitleRow: {
+    display: "flex",
+    gap: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontFamily: "Lora, serif",
+    fontWeight: 700,
+    fontSize: 18,
+    color: "#fff",
+  },
+  badge: {
+    background: "#FF3B30",
+    color: "#fff",
+    borderRadius: 999,
+    padding: "2px 8px",
+    fontFamily: "Nunito, sans-serif",
+    fontWeight: 800,
+    fontSize: 12,
+  },
+  chatName: {
+    fontFamily: "Lora, serif",
+    fontWeight: 700,
+    fontSize: 16,
+    color: "#fff",
+  },
+  chatSub: {
+    fontFamily: "Nunito, sans-serif",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.65)",
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    background: "rgba(255,255,255,0.08)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    color: "#fff",
+    cursor: "pointer",
+    fontFamily: "Nunito, sans-serif",
+    fontWeight: 800,
+  },
+  list: {
+    padding: 10,
+    overflow: "auto",
+  },
+  thread: {
+    display: "flex",
+    gap: 10,
+    padding: 10,
+    borderRadius: 16,
+    background: "rgba(255,255,255,0.06)",
+    border: "1px solid rgba(255,255,255,0.08)",
+    marginBottom: 10,
+    cursor: "pointer",
+    textAlign: "left",
+  },
+  avatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 999,
+    objectFit: "cover",
+    border: `2px solid ${CHECKIN_GREEN}`,
+  },
+  threadTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  threadName: {
+    fontFamily: "Lora, serif",
+    fontWeight: 700,
+    color: "#fff",
+    fontSize: 15,
+  },
+  threadTime: {
+    fontFamily: "Nunito, sans-serif",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.6)",
+  },
+  threadBottom: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 10,
+    marginTop: 4,
+  },
+  threadLast: {
+    fontFamily: "Nunito, sans-serif",
+    fontSize: 12,
+    color: "rgba(255,255,255,0.75)",
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis",
+  },
+  unreadDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 999,
+    background: "#2F80FF",
+  },
+  chatWrap: {
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+  },
+  chatBody: {
+    flex: 1,
+    padding: 12,
+    overflow: "auto",
+  },
+  bubble: {
+    maxWidth: "78%",
+    padding: "10px 12px",
+    borderRadius: 16,
+  },
+  bubbleMe: {
+    background: CHECKIN_GREEN,
+    color: TEXT_MAIN,
+    borderTopRightRadius: 6,
+  },
+  bubbleThem: {
+    background: "rgba(255,255,255,0.12)",
+    color: "#fff",
+    borderTopLeftRadius: 6,
+  },
+  bubbleText: {
+    fontFamily: "Nunito, sans-serif",
+    fontSize: 13,
+    fontWeight: 700,
+  },
+  bubbleTime: {
+    fontFamily: "Nunito, sans-serif",
+    fontSize: 10,
+    marginTop: 6,
+    opacity: 0.7,
+    textAlign: "right",
+  },
+  inputBar: {
+    padding: 10,
+    borderTop: "1px solid rgba(255,255,255,0.08)",
+    display: "flex",
+    gap: 8,
+  },
+  input: {
+    flex: 1,
+    height: 38,
+    borderRadius: 14,
+    border: "1px solid rgba(255,255,255,0.12)",
+    background: "rgba(255,255,255,0.08)",
+    color: "#fff",
+    padding: "0 12px",
+    outline: "none",
+    fontFamily: "Nunito, sans-serif",
+    fontSize: 13,
+    fontWeight: 700,
+  },
+  sendBtn: {
+    height: 38,
+    padding: "0 14px",
+    borderRadius: 14,
+    background: CHECKIN_GREEN,
+    color: TEXT_MAIN,
+    fontFamily: "Nunito, sans-serif",
+    fontWeight: 900,
+    border: "none",
+    cursor: "pointer",
+  },
+  sendDisabled: {
+    opacity: 0.6,
+    cursor: "not-allowed",
+  },
+};

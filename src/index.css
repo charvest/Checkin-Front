@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap");
+
+@layer base {
+  html, body { height: 100%; }
+  body { @apply font-poppins text-text bg-white text-[16px]; }
+}
+
+@keyframes msgSlideInLeft {
+  from { transform: translateX(14px); opacity: 0.6; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes msgSlideInRight {
+  from { transform: translateX(-14px); opacity: 0.6; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+/* Fade-left animation */
+@keyframes fadeLeft {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.fade-left {
+  animation: fadeLeft 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* src/index.css (or your global css) */
+:root {
+  --green-primary: #b9ff66;
+  --green-glow: rgba(185, 255, 102, 0.22);
+  --page-bg: #fafcf8;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--page-bg);
+}
