@@ -41,7 +41,7 @@ export default function Hero() {
           observer.disconnect();
         }
       },
-      { threshold: 0.22 }
+      { threshold: 0.22 },
     );
 
     if (sectionRef.current) observer.observe(sectionRef.current);
@@ -208,8 +208,8 @@ export default function Hero() {
                 It’s okay to pause.
               </h2>
               <p className="mt-4 font-nunito text-white/85 text-[16.5px] xl:text-[18px] leading-[1.9]">
-                Checking in with yourself is a small step, but it can make a real
-                difference in how you feel today.
+                Checking in with yourself is a small step, but it can make a
+                real difference in how you feel today.
               </p>
             </div>
           </div>
