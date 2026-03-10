@@ -1,5 +1,12 @@
 // src/pages/Journal.js
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 /** CheckIn palette */
@@ -21,7 +28,15 @@ const LEGACY_OWNER_KEY = "journal_entries_owner_v1";
     ✅ Coping (from old Journal.js)
     - Dropdown removed (chips only)
 ========================= */
-const COPING_QUICK = ["Breathing", "Talked to someone", "Walk / Stretch", "Rest", "Music", "Prayer"];
+const COPING_QUICK = [
+  "Breathing",
+  "Talked to someone",
+  "Walk / Stretch",
+  "Rest",
+  "Music",
+  "Prayer",
+  "Other",
+];
 
 /** =========================
     JOURNAL API (DB sync)
@@ -32,7 +47,10 @@ const API_BASE = (process.env.REACT_APP_API_URL || "").replace(/\/+$/, "");
 
 function getAuthTokenSafe() {
   try {
-    return window.localStorage.getItem("token") || window.sessionStorage.getItem("token");
+    return (
+      window.localStorage.getItem("token") ||
+      window.sessionStorage.getItem("token")
+    );
   } catch {
     return null;
   }
@@ -99,7 +117,8 @@ function loadEntries(key = LEGACY_ENTRIES_KEY) {
     const raw = localStorage.getItem(key);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed))
+      return {};
     return parsed;
   } catch {
     return {};
@@ -196,11 +215,18 @@ function ensureEntryShape(e) {
     daySubmitted: false,
     daySubmittedAt: null,
     clientUpdatedAt: null,
-    phq: { answers: Array(9).fill(null), submitted: false, score: null, completedAt: null },
+    phq: {
+      answers: Array(9).fill(null),
+      submitted: false,
+      score: null,
+      completedAt: null,
+    },
   };
   if (!e) return base;
 
-  const copingUsed = Array.isArray(e?.copingUsed) ? e.copingUsed.filter(Boolean) : [];
+  const copingUsed = Array.isArray(e?.copingUsed)
+    ? e.copingUsed.filter(Boolean)
+    : [];
 
   return {
     ...base,
@@ -209,7 +235,10 @@ function ensureEntryShape(e) {
     copingUsed,
     daySubmitted: !!e?.daySubmitted,
     daySubmittedAt: e?.daySubmittedAt || null,
-    clientUpdatedAt: typeof e?.clientUpdatedAt === "number" ? e.clientUpdatedAt : base.clientUpdatedAt,
+    clientUpdatedAt:
+      typeof e?.clientUpdatedAt === "number"
+        ? e.clientUpdatedAt
+        : base.clientUpdatedAt,
     phq: {
       ...base.phq,
       ...(e.phq || {}),
@@ -234,7 +263,9 @@ function setEntry(entries, dateKey, patch) {
     [dateKey]: {
       ...prev,
       ...patch,
-      copingUsed: Array.isArray(patch?.copingUsed) ? patch.copingUsed : prev.copingUsed,
+      copingUsed: Array.isArray(patch?.copingUsed)
+        ? patch.copingUsed
+        : prev.copingUsed,
       phq: patch?.phq ? { ...prev.phq, ...patch.phq } : prev.phq,
     },
   };
@@ -290,14 +321,21 @@ function formatNiceDate(dateKey) {
   const [y, m, d] = (dateKey || "").split("-").map((x) => Number(x));
   if (!y || !m || !d) return dateKey || "";
   const dt = new Date(y, m - 1, d);
-  return dt.toLocaleDateString(undefined, { month: "short", day: "2-digit", year: "numeric" });
+  return dt.toLocaleDateString(undefined, {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  });
 }
 
 function formatNiceTime(iso) {
   if (!iso) return "";
   const dt = new Date(iso);
   if (Number.isNaN(dt.getTime())) return "";
-  return dt.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return dt.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 /** Build tracker series (Saved moods only) — LOCAL date math */
@@ -307,13 +345,13 @@ function buildTrackerSeries(entries, baseDateKey, days = TRACKER_DAYS) {
 
   for (let i = 0; i < days; i++) {
     const x = new Date(base);
-    x.setDate(base.getDate() - ((days - 1) - i));
+    x.setDate(base.getDate() - (days - 1 - i));
 
     const key = keyFromDateLocal(x);
     const label = `${x.getMonth() + 1}/${x.getDate()}`;
     const e = getEntry(entries, key);
 
-    const mood = e.daySubmitted ? (e.mood || null) : null;
+    const mood = e.daySubmitted ? e.mood || null : null;
     list.push({ key, label, mood });
   }
   return list;
@@ -363,13 +401,26 @@ function tipsForEntry(entry) {
   }
 
   const addOns = [];
-  if (reason === "School") addOns.push("School tip: do the easiest task first to break procrastination.");
-  if (reason === "Family") addOns.push("Family tip: set a small boundary (ex: “I need 10 minutes”).");
-  if (reason === "Friends") addOns.push("Friends tip: clarify one thing with a short message instead of overthinking.");
-  if (reason === "Health") addOns.push("Health tip: gentle routine (water, light food, rest).");
-  if (reason === "Other") addOns.push("Try naming the trigger in 1 short sentence—clarity lowers stress.");
+  if (reason === "School")
+    addOns.push(
+      "School tip: do the easiest task first to break procrastination.",
+    );
+  if (reason === "Family")
+    addOns.push("Family tip: set a small boundary (ex: “I need 10 minutes”).");
+  if (reason === "Friends")
+    addOns.push(
+      "Friends tip: clarify one thing with a short message instead of overthinking.",
+    );
+  if (reason === "Health")
+    addOns.push("Health tip: gentle routine (water, light food, rest).");
+  if (reason === "Other")
+    addOns.push(
+      "Try naming the trigger in 1 short sentence—clarity lowers stress.",
+    );
 
-  const noteAdd = notes ? ["Your note matters—re-read it and highlight one thing you did well."] : [];
+  const noteAdd = notes
+    ? ["Your note matters—re-read it and highlight one thing you did well."]
+    : [];
 
   return {
     personalized: true,
@@ -381,7 +432,12 @@ function tipsForEntry(entry) {
 /** Icons */
 function IconChevron({ className = "", down = true }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d={down ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"}
         stroke="currentColor"
@@ -395,9 +451,24 @@ function IconChevron({ className = "", down = true }) {
 
 function IconCalendar({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M7 3v3M17 3v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M4.5 9h15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M7 3v3M17 3v3"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M4.5 9h15"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
       <path
         d="M6.5 6h11c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2h-11c-1.1 0-2-.9-2-2V8c0-1.1.9-2 2-2Z"
         stroke="currentColor"
@@ -410,7 +481,12 @@ function IconCalendar({ className = "" }) {
 
 function IconWellness({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M12 21s-7-4.6-9-9.2C1.3 8 3.7 5.5 6.6 5.5c1.9 0 3.4 1 4.4 2.5 1-1.5 2.5-2.5 4.4-2.5 2.9 0 5.3 2.5 3.6 6.3C19 16.4 12 21 12 21Z"
         stroke="currentColor"
@@ -430,7 +506,12 @@ function IconWellness({ className = "" }) {
 
 function IconBolt({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M13 2L3 14h7l-1 8 12-14h-7l-1-6Z"
         stroke="currentColor"
@@ -444,8 +525,19 @@ function IconBolt({ className = "" }) {
 
 function IconCheck({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M20 6 9 17l-5-5"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -453,36 +545,95 @@ function IconCheck({ className = "" }) {
 /** Step icons */
 function IconMood({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M12 21a9 9 0 1 0-9-9 9 9 0 0 0 9 9Z" stroke="currentColor" strokeWidth="2" />
-      <path d="M8.5 10.2h0.01M15.5 10.2h0.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-      <path d="M8.3 14.2c1.1 1.6 2.7 2.5 3.7 2.5s2.6-.9 3.7-2.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 21a9 9 0 1 0-9-9 9 9 0 0 0 9 9Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M8.5 10.2h0.01M15.5 10.2h0.01"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8.3 14.2c1.1 1.6 2.7 2.5 3.7 2.5s2.6-.9 3.7-2.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function IconReason({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M7 18l-3 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M8 9h8M8 12h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M7 18l-3 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H7Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 9h8M8 12h6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function IconNotes({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M7 3h7l3 3v15a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M14 3v4a1 1 0 0 0 1 1h4" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-      <path d="M8 12h8M8 16h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M7 3h7l3 3v15a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 3v4a1 1 0 0 0 1 1h4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 12h8M8 16h6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function IconCoping({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
       {/* Clean heart + centered plus (matches the Coping card header & step chip) */}
       <path
         d="M12 21s-7-4.6-9-9.2C1.3 8 3.7 5.5 6.6 5.5c1.9 0 3.4 1 4.4 2.5 1-1.5 2.5-2.5 4.4-2.5 2.9 0 5.3 2.5 3.6 6.3C19 16.4 12 21 12 21Z"
@@ -490,12 +641,21 @@ function IconCoping({ className = "" }) {
         strokeWidth="2"
         strokeLinejoin="round"
       />
-      <path d="M12 8.8v6.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M8.9 11.9h6.2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M12 8.8v6.2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8.9 11.9h6.2"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
-
 
 /** Tiny animated SVG mascot (no assets) */
 function StepMascot({ show }) {
@@ -503,7 +663,12 @@ function StepMascot({ show }) {
   if (!show) return null;
 
   return (
-    <motion.div className="absolute -top-2 -right-2" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
+    <motion.div
+      className="absolute -top-2 -right-2"
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0 }}
+    >
       <motion.svg
         width="22"
         height="22"
@@ -511,7 +676,9 @@ function StepMascot({ show }) {
         fill="none"
         aria-hidden="true"
         animate={reduce ? {} : { y: [0, -4, 0], rotate: [0, -8, 8, 0] }}
-        transition={reduce ? {} : { duration: 1.1, repeat: Infinity, ease: "easeInOut" }}
+        transition={
+          reduce ? {} : { duration: 1.1, repeat: Infinity, ease: "easeInOut" }
+        }
       >
         <path
           d="M12 2l1.4 4.1L18 7.5l-4.6 1.4L12 13l-1.4-4.1L6 7.5l4.6-1.4L12 2Z"
@@ -519,27 +686,44 @@ function StepMascot({ show }) {
           strokeWidth="1.8"
           strokeLinejoin="round"
         />
-        <circle cx="19" cy="5" r="1.2" fill="rgba(185,255,102,0.95)" stroke="rgba(0,0,0,0.35)" />
+        <circle
+          cx="19"
+          cy="5"
+          r="1.2"
+          fill="rgba(185,255,102,0.95)"
+          stroke="rgba(0,0,0,0.35)"
+        />
       </motion.svg>
     </motion.div>
   );
 }
 
 /** Mobile step button */
-function MobileStepButton({ label, active, done, disabled, onClick, icon: Icon }) {
+function MobileStepButton({
+  label,
+  active,
+  done,
+  disabled,
+  onClick,
+  icon: Icon,
+}) {
   const wrapClass = done
     ? "bg-[#B9FF66]/70 border-black/20 text-black"
     : active
-    ? "bg-black/5 border-black/30 text-black"
-    : "bg-white border-black/10 text-black/50";
+      ? "bg-black/5 border-black/30 text-black"
+      : "bg-white border-black/10 text-black/50";
 
   const bubbleClass = done
     ? "bg-black text-white"
     : active
-    ? "bg-[#B9FF66]/55 text-[#141414]"
-    : "bg-black/10 text-black/55";
+      ? "bg-[#B9FF66]/55 text-[#141414]"
+      : "bg-black/10 text-black/55";
 
-  const labelClass = done ? "text-black" : active ? "text-black" : "text-black/55";
+  const labelClass = done
+    ? "text-black"
+    : active
+      ? "text-black"
+      : "text-black/55";
 
   return (
     <button
@@ -565,9 +749,16 @@ function MobileStepButton({ label, active, done, disabled, onClick, icon: Icon }
           "h-7 w-7 sm:h-8 sm:w-8",
           bubbleClass,
         ].join(" ")}
-        style={{ boxShadow: active && !done ? "0 10px 22px rgba(185,255,102,0.22)" : "none" }}
+        style={{
+          boxShadow:
+            active && !done ? "0 10px 22px rgba(185,255,102,0.22)" : "none",
+        }}
       >
-        {done ? <IconCheck className="h-4 w-4" /> : <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />}
+        {done ? (
+          <IconCheck className="h-4 w-4" />
+        ) : (
+          <Icon className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+        )}
       </div>
 
       <div
@@ -582,8 +773,6 @@ function MobileStepButton({ label, active, done, disabled, onClick, icon: Icon }
     </button>
   );
 }
-
-
 
 /** =========================
     3D-ish EMOTE (SVG)
@@ -621,12 +810,21 @@ function MoodEmote({ mood = "Okay", size = 28, className = "" }) {
   );
 }
 
-
 /** Doodles (kept minimal + light) */
 function DoodleSpark({ className = "" }) {
   return (
-    <svg viewBox="0 0 120 120" className={className} fill="none" aria-hidden="true">
-      <path d="M60 10l7 18 18 7-18 7-7 18-7-18-18-7 18-7 7-18Z" stroke="currentColor" strokeWidth="3" strokeLinejoin="round" />
+    <svg
+      viewBox="0 0 120 120"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M60 10l7 18 18 7-18 7-7 18-7-18-18-7 18-7 7-18Z"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -635,19 +833,43 @@ function DoodleSpark({ className = "" }) {
 function Pill({ children, tone = "light" }) {
   const styles =
     tone === "green"
-      ? { background: "rgba(185,255,102,0.60)", border: "rgba(0,0,0,0.14)", color: CHECKIN_DARK }
+      ? {
+          background: "rgba(185,255,102,0.60)",
+          border: "rgba(0,0,0,0.14)",
+          color: CHECKIN_DARK,
+        }
       : tone === "dark"
-      ? { background: "rgba(20,20,20,0.92)", border: "rgba(0,0,0,0.12)", color: "white" }
-      : tone === "warn"
-      ? { background: "rgba(255, 214, 102,0.55)", border: "rgba(0,0,0,0.14)", color: CHECKIN_DARK }
-      : tone === "error"
-      ? { background: "rgba(255, 120, 120, 0.20)", border: "rgba(220, 38, 38, 0.35)", color: "rgba(185, 28, 28, 0.95)" }
-      : { background: "rgba(0,0,0,0.03)", border: "rgba(0,0,0,0.12)", color: "rgba(0,0,0,0.70)" };
+        ? {
+            background: "rgba(20,20,20,0.92)",
+            border: "rgba(0,0,0,0.12)",
+            color: "white",
+          }
+        : tone === "warn"
+          ? {
+              background: "rgba(255, 214, 102,0.55)",
+              border: "rgba(0,0,0,0.14)",
+              color: CHECKIN_DARK,
+            }
+          : tone === "error"
+            ? {
+                background: "rgba(255, 120, 120, 0.20)",
+                border: "rgba(220, 38, 38, 0.35)",
+                color: "rgba(185, 28, 28, 0.95)",
+              }
+            : {
+                background: "rgba(0,0,0,0.03)",
+                border: "rgba(0,0,0,0.12)",
+                color: "rgba(0,0,0,0.70)",
+              };
 
   return (
     <span
       className="inline-flex items-center rounded-full border px-3 py-1 text-[12px] font-extrabold"
-      style={{ background: styles.background, borderColor: styles.border, color: styles.color }}
+      style={{
+        background: styles.background,
+        borderColor: styles.border,
+        color: styles.color,
+      }}
     >
       {children}
     </span>
@@ -656,15 +878,31 @@ function Pill({ children, tone = "light" }) {
 
 function IconMiniCheck({ className = "" }) {
   return (
-    <svg viewBox="0 0 20 20" className={className} fill="none" aria-hidden="true">
-      <path d="M16.2 5.8 8.7 13.3 3.8 8.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      viewBox="0 0 20 20"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M16.2 5.8 8.7 13.3 3.8 8.4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 function IconMiniCloud({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
       <path
         d="M7.5 18.5h9.2a4.3 4.3 0 0 0 .6-8.6A5.7 5.7 0 0 0 6.6 8.6 4.2 4.2 0 0 0 7.5 18.5Z"
         stroke="currentColor"
@@ -677,25 +915,63 @@ function IconMiniCloud({ className = "" }) {
 
 function IconMiniWarn({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M12 3.5 22 20.5H2L12 3.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M12 9v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M12 17.2h.01" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 3.5 22 20.5H2L12 3.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M12 9v5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 17.2h.01"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function SpinnerMini({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M12 2.8a9.2 9.2 0 1 0 9.2 9.2" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 2.8a9.2 9.2 0 1 0 9.2 9.2"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function CloudStatusPill({ status, message }) {
-  const tone = status === "saved" ? "green" : status === "error" ? "error" : "light";
-  const Icon = status === "saving" ? SpinnerMini : status === "saved" ? IconMiniCheck : status === "error" ? IconMiniWarn : IconMiniCloud;
+  const tone =
+    status === "saved" ? "green" : status === "error" ? "error" : "light";
+  const Icon =
+    status === "saving"
+      ? SpinnerMini
+      : status === "saved"
+        ? IconMiniCheck
+        : status === "error"
+          ? IconMiniWarn
+          : IconMiniCloud;
 
   return (
     <Pill tone={tone}>
@@ -709,16 +985,21 @@ function CloudStatusPill({ status, message }) {
   );
 }
 
-function Card({ title, right, children, className = "" }) {
+function Card({ title, right, children, className = "", bodyClassName = "" }) {
   return (
-    <div className={`rounded-[26px] border border-black/10 bg-white/85 backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,0.08)] overflow-hidden ${className}`}>
+    <div
+      className={`rounded-[26px] border border-black/10 bg-white/85 backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,0.08)] overflow-hidden flex flex-col ${className}`}
+    >
       <div className="px-5 py-4 bg-black/[0.02] flex items-center justify-between gap-3">
-        <div className="text-[16px] sm:text-[17px] lg:text-[18px] font-extrabold text-[#141414] flex items-center gap-2" style={{ fontFamily: "Lora, serif" }}>
+        <div
+          className="text-[16px] sm:text-[17px] lg:text-[18px] font-extrabold text-[#141414] flex items-center gap-2"
+          style={{ fontFamily: "Lora, serif" }}
+        >
           {title}
         </div>
         {right}
       </div>
-      <div className="p-5 lg:p-6">{children}</div>
+      <div className={`p-5 lg:p-6 flex-1 ${bodyClassName}`}>{children}</div>
     </div>
   );
 }
@@ -739,9 +1020,13 @@ function Chip({ active, children, onClick, left, disabled }) {
       "
       style={{
         borderColor: active ? "rgba(0,0,0,0.30)" : "rgba(0,0,0,0.14)",
-        background: active ? "linear-gradient(180deg, rgba(185,255,102,0.60), rgba(185,255,102,0.30))" : "rgba(255,255,255,0.90)",
+        background: active
+          ? "linear-gradient(180deg, rgba(185,255,102,0.60), rgba(185,255,102,0.30))"
+          : "rgba(255,255,255,0.90)",
         color: CHECKIN_DARK,
-        boxShadow: active ? "0 14px 40px rgba(0,0,0,0.10)" : "0 8px 24px rgba(0,0,0,0.05)",
+        boxShadow: active
+          ? "0 14px 40px rgba(0,0,0,0.10)"
+          : "0 8px 24px rgba(0,0,0,0.05)",
       }}
       aria-pressed={active ? "true" : "false"}
     >
@@ -785,7 +1070,13 @@ function buildSmoothPath(pts) {
   return d.join(" ");
 }
 
-function MoodTracker({ series, todayKey, title = "Mood Tracker", subtitle = "Saved mood for the last 7 days.", compact = false }) {
+function MoodTracker({
+  series,
+  todayKey,
+  title = "Mood Tracker",
+  subtitle = "Saved mood for the last 7 days.",
+  compact = false,
+}) {
   const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 
   const w = 860;
@@ -797,7 +1088,6 @@ function MoodTracker({ series, todayKey, title = "Mood Tracker", subtitle = "Sav
   // Emoji marker above each saved mood point
   const EMOJI_SIZE = compact ? 20 : 24;
   const EMOJI_LIFT = 10; // px gap above the dot
-
 
   const shouldReduceMotion = useReducedMotion();
   const gid = useId();
@@ -815,27 +1105,42 @@ function MoodTracker({ series, todayKey, title = "Mood Tracker", subtitle = "Sav
   const points = useMemo(() => {
     return series.map((d, i) => {
       const lvl = moodToLevel(d.mood);
-      return { ...d, i, x: padX + i * step, y: lvl === null ? null : yForLevel(lvl) };
+      return {
+        ...d,
+        i,
+        x: padX + i * step,
+        y: lvl === null ? null : yForLevel(lvl),
+      };
     });
   }, [series, step]);
 
   const path = useMemo(() => buildSmoothPath(points), [points]);
-  const lineTransition = shouldReduceMotion ? { duration: 0 } : { duration: 0.9, ease: "easeOut" };
+  const lineTransition = shouldReduceMotion
+    ? { duration: 0 }
+    : { duration: 0.9, ease: "easeOut" };
   const hasAny = useMemo(() => points.some((p) => p.y !== null), [points]);
 
   return (
     <div className="rounded-[24px] border border-black/10 bg-white shadow-[0_14px_40px_rgba(0,0,0,0.07)] overflow-hidden">
       <div className="px-5 pt-4 pb-2">
-        <div className="text-[15px] lg:text-[16px] font-extrabold text-[#141414] flex items-center gap-2" style={{ fontFamily: "Lora, serif" }}>
+        <div
+          className="text-[15px] lg:text-[16px] font-extrabold text-[#141414] flex items-center gap-2"
+          style={{ fontFamily: "Lora, serif" }}
+        >
           {title}
           <span className="text-[11px] font-extrabold text-black/35"></span>
         </div>
-        {!compact && <div className="text-[12px] text-black/45 mt-1">{subtitle}</div>}
+        {!compact && (
+          <div className="text-[12px] text-black/45 mt-1">{subtitle}</div>
+        )}
       </div>
 
       <div className="px-3 pb-4">
         <div className="w-full overflow-x-auto md:overflow-visible">
-          <svg viewBox={`0 0 ${w} ${h}`} className="w-full min-w-[520px] md:min-w-0">
+          <svg
+            viewBox={`0 0 ${w} ${h}`}
+            className="w-full min-w-[520px] md:min-w-0"
+          >
             <defs>
               <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="rgba(185,255,102,0.26)" />
@@ -849,13 +1154,45 @@ function MoodTracker({ series, todayKey, title = "Mood Tracker", subtitle = "Sav
               </linearGradient>
             </defs>
 
-            <rect x={padX} y={padYTop} width={w - padX * 2} height={h - padYTop - padYBottom} rx="14" fill={`url(#${bandId})`} opacity="0.9" />
-            <rect x={padX} y={padYTop} width={w - padX * 2} height={h - padYTop - padYBottom} rx="14" fill={`url(#${gradId})`} opacity="0.50" />
+            <rect
+              x={padX}
+              y={padYTop}
+              width={w - padX * 2}
+              height={h - padYTop - padYBottom}
+              rx="14"
+              fill={`url(#${bandId})`}
+              opacity="0.9"
+            />
+            <rect
+              x={padX}
+              y={padYTop}
+              width={w - padX * 2}
+              height={h - padYTop - padYBottom}
+              rx="14"
+              fill={`url(#${gradId})`}
+              opacity="0.50"
+            />
 
-            <line x1={padX} y1={h - padYBottom} x2={w - padX} y2={h - padYBottom} stroke="rgba(0,0,0,0.10)" strokeWidth="2" />
+            <line
+              x1={padX}
+              y1={h - padYBottom}
+              x2={w - padX}
+              y2={h - padYBottom}
+              stroke="rgba(0,0,0,0.10)"
+              strokeWidth="2"
+            />
 
             {points.map((p) => (
-              <line key={`grid-${p.i}`} x1={p.x} y1={h - padYBottom} x2={p.x} y2={padYTop + 10} stroke="rgba(0,0,0,0.06)" strokeWidth="2" strokeLinecap="round" />
+              <line
+                key={`grid-${p.i}`}
+                x1={p.x}
+                y1={h - padYBottom}
+                x2={p.x}
+                y2={padYTop + 10}
+                stroke="rgba(0,0,0,0.06)"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
             ))}
 
             {path && (
@@ -893,7 +1230,11 @@ function MoodTracker({ series, todayKey, title = "Mood Tracker", subtitle = "Sav
                         cx={p.x}
                         cy={p.y}
                         r={isToday ? 12 : 8}
-                        fill={isToday ? "rgba(185,255,102,0.30)" : "rgba(185,255,102,0.22)"}
+                        fill={
+                          isToday
+                            ? "rgba(185,255,102,0.30)"
+                            : "rgba(185,255,102,0.22)"
+                        }
                         initial={{ scale: shouldReduceMotion ? 1 : 0 }}
                         animate={{ scale: 1 }}
                         transition={{ duration: shouldReduceMotion ? 0 : 0.25 }}
@@ -911,7 +1252,11 @@ function MoodTracker({ series, todayKey, title = "Mood Tracker", subtitle = "Sav
                       {/* Mood emoji above point */}
                       <foreignObject
                         x={p.x - EMOJI_SIZE / 2}
-                        y={clamp(p.y - (EMOJI_SIZE + EMOJI_LIFT), 2, h - EMOJI_SIZE - 2)}
+                        y={clamp(
+                          p.y - (EMOJI_SIZE + EMOJI_LIFT),
+                          2,
+                          h - EMOJI_SIZE - 2,
+                        )}
                         width={EMOJI_SIZE}
                         height={EMOJI_SIZE}
                         style={{ overflow: "visible", pointerEvents: "none" }}
@@ -931,32 +1276,45 @@ function MoodTracker({ series, todayKey, title = "Mood Tracker", subtitle = "Sav
                       </foreignObject>
 
                       {/* ✅ Today badge fixed + positioned above the point */}
-                      {isToday && (() => {
-                        const badgeW = 50;
-                        const badgeH = 18;
-                        const rawX = p.x - badgeW / 2;
-                        const tx = clamp(rawX, 6, w - badgeW - 6);
-                        const ty = clamp(p.y - 74, 6, h - badgeH - 6);
+                      {isToday &&
+                        (() => {
+                          const badgeW = 50;
+                          const badgeH = 18;
+                          const rawX = p.x - badgeW / 2;
+                          const tx = clamp(rawX, 6, w - badgeW - 6);
+                          const ty = clamp(p.y - 74, 6, h - badgeH - 6);
 
-                        return (
-                          <g transform={`translate(${tx}, ${ty})`}>
-                            <rect x="0" y="0" width={badgeW} height={badgeH} rx="9" fill="rgba(20,20,20,0.92)" />
-                            <text
-                              x={badgeW / 2}
-                              y={12.5}
-                              textAnchor="middle"
-                              fontSize="11"
-                              fill="white"
-                              fontWeight="900"
-                            >
-                              Today
-                            </text>
-                          </g>
-                        );
-                      })()}
+                          return (
+                            <g transform={`translate(${tx}, ${ty})`}>
+                              <rect
+                                x="0"
+                                y="0"
+                                width={badgeW}
+                                height={badgeH}
+                                rx="9"
+                                fill="rgba(20,20,20,0.92)"
+                              />
+                              <text
+                                x={badgeW / 2}
+                                y={12.5}
+                                textAnchor="middle"
+                                fontSize="11"
+                                fill="white"
+                                fontWeight="900"
+                              >
+                                Today
+                              </text>
+                            </g>
+                          );
+                        })()}
                     </>
                   ) : (
-                    <circle cx={p.x} cy={h - padYBottom} r="3.5" fill="rgba(0,0,0,0.18)" />
+                    <circle
+                      cx={p.x}
+                      cy={h - padYBottom}
+                      r="3.5"
+                      fill="rgba(0,0,0,0.18)"
+                    />
                   )}
 
                   {p.label && (
@@ -978,10 +1336,24 @@ function MoodTracker({ series, todayKey, title = "Mood Tracker", subtitle = "Sav
 
             {!hasAny && (
               <g>
-                <text x={w / 2} y={h / 2} textAnchor="middle" fontSize="14" fill="rgba(0,0,0,0.55)" fontWeight="800">
+                <text
+                  x={w / 2}
+                  y={h / 2}
+                  textAnchor="middle"
+                  fontSize="14"
+                  fill="rgba(0,0,0,0.55)"
+                  fontWeight="800"
+                >
                   No saved moods yet
                 </text>
-                <text x={w / 2} y={h / 2 + 18} textAnchor="middle" fontSize="12" fill="rgba(0,0,0,0.45)" fontWeight="700">
+                <text
+                  x={w / 2}
+                  y={h / 2 + 18}
+                  textAnchor="middle"
+                  fontSize="12"
+                  fill="rgba(0,0,0,0.45)"
+                  fontWeight="700"
+                >
                   Pick a mood and press Save to start tracking
                 </text>
               </g>
@@ -996,7 +1368,14 @@ function MoodTracker({ series, todayKey, title = "Mood Tracker", subtitle = "Sav
 /** =========================
     History Modal (Responsive + Footer Actions)
 ========================= */
-function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, todayKey }) {
+function HistoryModal({
+  open,
+  onClose,
+  items,
+  entries,
+  trackerSeriesForDate,
+  todayKey,
+}) {
   const [page, setPage] = useState("list");
   const [selectedDate, setSelectedDate] = useState(null);
   const [visibleCount, setVisibleCount] = useState(7);
@@ -1005,7 +1384,10 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
   const detailScrollRef = useRef(null);
   const listSentinelRef = useRef(null);
 
-  const visibleItems = useMemo(() => items.slice(0, Math.min(items.length, Math.max(7, visibleCount))), [items, visibleCount]);
+  const visibleItems = useMemo(
+    () => items.slice(0, Math.min(items.length, Math.max(7, visibleCount))),
+    [items, visibleCount],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -1041,15 +1423,21 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
           setVisibleCount((v) => Math.min(items.length, v + 14));
         }
       },
-      { root, rootMargin: "140px" }
+      { root, rootMargin: "140px" },
     );
 
     obs.observe(sentinel);
     return () => obs.disconnect();
   }, [open, page, items.length, visibleCount]);
 
-  const detailEntry = useMemo(() => (selectedDate ? getEntry(entries, selectedDate) : null), [entries, selectedDate]);
-  const detailTracker = useMemo(() => (selectedDate ? trackerSeriesForDate?.(selectedDate) || [] : []), [selectedDate, trackerSeriesForDate]);
+  const detailEntry = useMemo(
+    () => (selectedDate ? getEntry(entries, selectedDate) : null),
+    [entries, selectedDate],
+  );
+  const detailTracker = useMemo(
+    () => (selectedDate ? trackerSeriesForDate?.(selectedDate) || [] : []),
+    [selectedDate, trackerSeriesForDate],
+  );
 
   function goDetail(date) {
     setSelectedDate(date);
@@ -1069,7 +1457,12 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-[999] flex items-center justify-center px-2 sm:px-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <motion.div
+          className="fixed inset-0 z-[999] flex items-center justify-center px-2 sm:px-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
           <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
           <motion.div
@@ -1091,26 +1484,49 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
               overflow-hidden
             "
           >
-            <div className="p-4 sm:p-6" style={{ background: `radial-gradient(900px 260px at 15% 0%, ${CHECKIN_GREEN} 0%, transparent 62%)` }}>
-              <div className="text-[15px] sm:text-[16px] font-extrabold text-[#141414]" style={{ fontFamily: "Lora, serif" }}>
+            <div
+              className="p-4 sm:p-6"
+              style={{
+                background: `radial-gradient(900px 260px at 15% 0%, ${CHECKIN_GREEN} 0%, transparent 62%)`,
+              }}
+            >
+              <div
+                className="text-[15px] sm:text-[16px] font-extrabold text-[#141414]"
+                style={{ fontFamily: "Lora, serif" }}
+              >
                 {page === "list" ? "History" : "History detail"}
               </div>
-              <div className="mt-1 text-[12px] sm:text-[13px] text-black/60 font-semibold">{page === "list" ? "Tap a date to view it." : "Review the saved entry."}</div>
+              <div className="mt-1 text-[12px] sm:text-[13px] text-black/60 font-semibold">
+                {page === "list"
+                  ? "Tap a date to view it."
+                  : "Review the saved entry."}
+              </div>
             </div>
 
             <div className="p-3 sm:p-4">
               {page === "list" ? (
                 <div className="w-full">
                   {items.length === 0 ? (
-                    <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-[13px] text-black/60">No saved entries yet.</div>
+                    <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-[13px] text-black/60">
+                      No saved entries yet.
+                    </div>
                   ) : (
-                    <div ref={listScrollRef} className="max-h-[62vh] sm:max-h-[65vh] overflow-auto rounded-2xl border border-black/10 pb-20 sm:pb-24">
+                    <div
+                      ref={listScrollRef}
+                      className="max-h-[62vh] sm:max-h-[65vh] overflow-auto rounded-2xl border border-black/10 pb-20 sm:pb-24"
+                    >
                       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur px-3 sm:px-4 py-2 border-b border-black/10 text-[11px] text-black/55 font-semibold">
-                        Showing latest {visibleItems.length} of {items.length}. Scroll down to load earlier entries.
+                        Showing latest {visibleItems.length} of {items.length}.
+                        Scroll down to load earlier entries.
                       </div>
 
                       {visibleItems.map((it, idx) => (
-                        <button key={it.date} type="button" onClick={() => goDetail(it.date)} className="w-full text-left px-3 sm:px-4 py-3 hover:bg-black/[0.03] transition">
+                        <button
+                          key={it.date}
+                          type="button"
+                          onClick={() => goDetail(it.date)}
+                          className="w-full text-left px-3 sm:px-4 py-3 hover:bg-black/[0.03] transition"
+                        >
                           <div className="flex items-center justify-between gap-3">
                             <div className="text-[13px] font-extrabold text-[#141414] flex items-center gap-2">
                               {it.mood ? (
@@ -1120,31 +1536,51 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
                               ) : null}
                               {formatNiceDate(it.date)}
                             </div>
-                            <div className="text-[12px] text-black/55 font-semibold">{it.dayLocked ? "Saved" : "Draft"}</div>
+                            <div className="text-[12px] text-black/55 font-semibold">
+                              {it.dayLocked ? "Saved" : "Draft"}
+                            </div>
                           </div>
 
                           <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-black/65">
-                            <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1" style={{ borderColor: "rgba(0,0,0,0.12)" }}>
-                              <span className="font-extrabold">Mood:</span> {it.mood || "—"}
+                            <span
+                              className="inline-flex items-center gap-2 rounded-full border px-3 py-1"
+                              style={{ borderColor: "rgba(0,0,0,0.12)" }}
+                            >
+                              <span className="font-extrabold">Mood:</span>{" "}
+                              {it.mood || "—"}
                             </span>
-                            <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1" style={{ borderColor: "rgba(0,0,0,0.12)" }}>
-                              <span className="font-extrabold">Reason:</span> {it.reason || "—"}
+                            <span
+                              className="inline-flex items-center gap-2 rounded-full border px-3 py-1"
+                              style={{ borderColor: "rgba(0,0,0,0.12)" }}
+                            >
+                              <span className="font-extrabold">Reason:</span>{" "}
+                              {it.reason || "—"}
                             </span>
 
                             {it.copingPreview ? (
-                              <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1" style={{ borderColor: "rgba(0,0,0,0.12)" }}>
-                                <span className="font-extrabold">Coping:</span> {it.copingPreview}
+                              <span
+                                className="inline-flex items-center gap-2 rounded-full border px-3 py-1"
+                                style={{ borderColor: "rgba(0,0,0,0.12)" }}
+                              >
+                                <span className="font-extrabold">Coping:</span>{" "}
+                                {it.copingPreview}
                               </span>
                             ) : null}
 
                             {it.notesPreview && (
-                              <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1" style={{ borderColor: "rgba(0,0,0,0.12)" }}>
-                                <span className="font-extrabold">Note:</span> {it.notesPreview}
+                              <span
+                                className="inline-flex items-center gap-2 rounded-full border px-3 py-1"
+                                style={{ borderColor: "rgba(0,0,0,0.12)" }}
+                              >
+                                <span className="font-extrabold">Note:</span>{" "}
+                                {it.notesPreview}
                               </span>
                             )}
                           </div>
 
-                          {idx !== visibleItems.length - 1 && <div className="mt-3 h-px bg-black/10" />}
+                          {idx !== visibleItems.length - 1 && (
+                            <div className="mt-3 h-px bg-black/10" />
+                          )}
                         </button>
                       ))}
 
@@ -1154,12 +1590,18 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
                         <div className="px-3 sm:px-4 pb-4">
                           <button
                             type="button"
-                            onClick={() => setVisibleCount((v) => Math.min(items.length, v + 14))}
+                            onClick={() =>
+                              setVisibleCount((v) =>
+                                Math.min(items.length, v + 14),
+                              )
+                            }
                             className="w-full rounded-xl border border-black/10 bg-black/[0.02] px-4 py-2 text-[12px] font-extrabold text-[#141414] hover:bg-black/[0.04] transition"
                           >
                             Load earlier entries
                           </button>
-                          <div className="mt-2 text-[11px] text-black/55 font-semibold">Tip: keep scrolling to load more.</div>
+                          <div className="mt-2 text-[11px] text-black/55 font-semibold">
+                            Tip: keep scrolling to load more.
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1168,27 +1610,54 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
               ) : (
                 <div className="w-full">
                   {!selectedDate || !detailEntry ? (
-                    <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-[13px] text-black/60">No date selected.</div>
+                    <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-[13px] text-black/60">
+                      No date selected.
+                    </div>
                   ) : (
-                    <div ref={detailScrollRef} className="max-h-[62vh] sm:max-h-[65vh] overflow-auto rounded-2xl border border-black/10 bg-white pb-20 sm:pb-24">
-                      <div className="p-4 border-b border-black/10" style={{ background: "rgba(0,0,0,0.02)" }}>
+                    <div
+                      ref={detailScrollRef}
+                      className="max-h-[62vh] sm:max-h-[65vh] overflow-auto rounded-2xl border border-black/10 bg-white pb-20 sm:pb-24"
+                    >
+                      <div
+                        className="p-4 border-b border-black/10"
+                        style={{ background: "rgba(0,0,0,0.02)" }}
+                      >
                         <div className="flex items-center justify-between gap-3">
                           <div>
-                            <div className="text-[13px] font-extrabold text-[#141414]">{formatNiceDate(selectedDate)}</div>
-                            <div className="text-[12px] text-black/55 font-semibold mt-1">{detailEntry.daySubmitted ? "Saved" : "Draft"}</div>
+                            <div className="text-[13px] font-extrabold text-[#141414]">
+                              {formatNiceDate(selectedDate)}
+                            </div>
+                            <div className="text-[12px] text-black/55 font-semibold mt-1">
+                              {detailEntry.daySubmitted ? "Saved" : "Draft"}
+                            </div>
                           </div>
 
-                          <div className="h-9 rounded-full px-3 text-[12px] font-extrabold inline-flex items-center" style={{ backgroundColor: CHECKIN_GREEN, color: CHECKIN_DARK, border: "1px solid rgba(0,0,0,0.15)" }}>
+                          <div
+                            className="h-9 rounded-full px-3 text-[12px] font-extrabold inline-flex items-center"
+                            style={{
+                              backgroundColor: CHECKIN_GREEN,
+                              color: CHECKIN_DARK,
+                              border: "1px solid rgba(0,0,0,0.15)",
+                            }}
+                          >
                             View only
                           </div>
                         </div>
 
                         <div className="mt-3 flex flex-wrap items-center gap-2 text-[12px] text-black/65">
-                          <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1" style={{ borderColor: "rgba(0,0,0,0.12)" }}>
-                            <span className="font-extrabold">Mood:</span> {safeText(detailEntry.mood)}
+                          <span
+                            className="inline-flex items-center gap-2 rounded-full border px-3 py-1"
+                            style={{ borderColor: "rgba(0,0,0,0.12)" }}
+                          >
+                            <span className="font-extrabold">Mood:</span>{" "}
+                            {safeText(detailEntry.mood)}
                           </span>
-                          <span className="inline-flex items-center gap-2 rounded-full border px-3 py-1" style={{ borderColor: "rgba(0,0,0,0.12)" }}>
-                            <span className="font-extrabold">Reason:</span> {safeText(detailEntry.reason)}
+                          <span
+                            className="inline-flex items-center gap-2 rounded-full border px-3 py-1"
+                            style={{ borderColor: "rgba(0,0,0,0.12)" }}
+                          >
+                            <span className="font-extrabold">Reason:</span>{" "}
+                            {safeText(detailEntry.reason)}
                           </span>
                         </div>
                       </div>
@@ -1200,12 +1669,17 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
                           Coping used
                         </div>
                         <div className="mt-2 rounded-2xl border border-black/10 bg-black/[0.02] p-3 text-[13px] text-black/70">
-                          {Array.isArray(detailEntry.copingUsed) && detailEntry.copingUsed.length ? detailEntry.copingUsed.join(", ") : "—"}
+                          {Array.isArray(detailEntry.copingUsed) &&
+                          detailEntry.copingUsed.length
+                            ? detailEntry.copingUsed.join(", ")
+                            : "—"}
                         </div>
                       </div>
 
                       <div className="p-4 border-b border-black/10">
-                        <div className="text-[12px] font-extrabold text-black/70">Notes</div>
+                        <div className="text-[12px] font-extrabold text-black/70">
+                          Notes
+                        </div>
                         <div className="mt-2 rounded-2xl border border-black/10 bg-black/[0.02] p-3 text-[13px] text-black/70 whitespace-pre-wrap">
                           {safeText(detailEntry.notes)}
                         </div>
@@ -1220,7 +1694,11 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
 
                           {(() => {
                             const w = tipsForEntry(detailEntry);
-                            return w.personalized ? <Pill tone="green">For you</Pill> : <Pill>General</Pill>;
+                            return w.personalized ? (
+                              <Pill tone="green">For you</Pill>
+                            ) : (
+                              <Pill>General</Pill>
+                            );
                           })()}
                         </div>
 
@@ -1228,11 +1706,21 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
                           const w = tipsForEntry(detailEntry);
                           return (
                             <div className="mt-3 rounded-2xl border border-black/10 bg-black/[0.02] p-4">
-                              {w.personalized && <div className="text-[12px] text-black/55 font-semibold mb-2">Based on your mood + reason for this day.</div>}
+                              {w.personalized && (
+                                <div className="text-[12px] text-black/55 font-semibold mb-2">
+                                  Based on your mood + reason for this day.
+                                </div>
+                              )}
                               <ul className="text-[13px] text-black/70 leading-relaxed space-y-2">
                                 {w.tips.map((t, i) => (
-                                  <li key={i} className="flex items-start gap-2">
-                                    <span className="mt-[6px] h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHECKIN_GREEN }} />
+                                  <li
+                                    key={i}
+                                    className="flex items-start gap-2"
+                                  >
+                                    <span
+                                      className="mt-[6px] h-2.5 w-2.5 rounded-full"
+                                      style={{ backgroundColor: CHECKIN_GREEN }}
+                                    />
                                     <span>{t}</span>
                                   </li>
                                 ))}
@@ -1243,7 +1731,13 @@ function HistoryModal({ open, onClose, items, entries, trackerSeriesForDate, tod
                       </div>
 
                       <div className="p-4">
-                        <MoodTracker series={detailTracker} todayKey={todayKey} title="Mood Tracker" compact subtitle="Saved mood for the last 7 days." />
+                        <MoodTracker
+                          series={detailTracker}
+                          todayKey={todayKey}
+                          title="Mood Tracker"
+                          compact
+                          subtitle="Saved mood for the last 7 days."
+                        />
                       </div>
                     </div>
                   )}
@@ -1298,7 +1792,12 @@ function TermsModal({ open, onAgree }) {
   return (
     <AnimatePresence>
       {open && (
-        <motion.div className="fixed inset-0 z-[1000] flex items-center justify-center px-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+        <motion.div
+          className="fixed inset-0 z-[1000] flex items-center justify-center px-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
           <div className="absolute inset-0 bg-black/45" />
 
           <motion.div
@@ -1311,33 +1810,62 @@ function TermsModal({ open, onAgree }) {
             transition={reduce ? { duration: 0 } : { duration: 0.2 }}
             className="relative w-full max-w-2xl rounded-[24px] border border-black/10 bg-white shadow-xl overflow-hidden"
           >
-            <div className="p-6" style={{ background: `radial-gradient(900px 260px at 15% 0%, ${CHECKIN_GREEN} 0%, transparent 62%)` }}>
-              <div className="text-[18px] sm:text-[20px] font-black text-[#141414]" style={{ fontFamily: "Lora, serif" }}>
+            <div
+              className="p-6"
+              style={{
+                background: `radial-gradient(900px 260px at 15% 0%, ${CHECKIN_GREEN} 0%, transparent 62%)`,
+              }}
+            >
+              <div
+                className="text-[18px] sm:text-[20px] font-black text-[#141414]"
+                style={{ fontFamily: "Lora, serif" }}
+              >
                 Terms & Conditions
               </div>
-              <div className="mt-2 text-[13px] text-black/65 font-semibold">You must accept to use the Journal and Mood Tracker.</div>
+              <div className="mt-2 text-[13px] text-black/65 font-semibold">
+                You must accept to use the Journal and Mood Tracker.
+              </div>
             </div>
 
             <div className="p-6 pt-4">
               <div className="max-h-[55vh] overflow-auto rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-[13px] text-black/75 leading-relaxed">
                 <ul className="space-y-2">
                   <li>
-                    <span className="font-extrabold text-black/80">Purpose:</span> This Journal is for daily reflection and mood tracking.
+                    <span className="font-extrabold text-black/80">
+                      Purpose:
+                    </span>{" "}
+                    This Journal is for daily reflection and mood tracking.
                   </li>
                   <li>
-                    <span className="font-extrabold text-black/80">Not medical advice:</span> This tool is not a substitute for professional help.
+                    <span className="font-extrabold text-black/80">
+                      Not medical advice:
+                    </span>{" "}
+                    This tool is not a substitute for professional help.
                   </li>
                   <li>
-                    <span className="font-extrabold text-black/80">Respect & privacy:</span> Keep your notes respectful and avoid sharing sensitive info you don’t want stored on this device.
+                    <span className="font-extrabold text-black/80">
+                      Respect & privacy:
+                    </span>{" "}
+                    Keep your notes respectful and avoid sharing sensitive info
+                    you don’t want stored on this device.
                   </li>
                   <li>
-                    <span className="font-extrabold text-black/80">Responsibility:</span> You are responsible for how you use this feature and your device access.
+                    <span className="font-extrabold text-black/80">
+                      Responsibility:
+                    </span>{" "}
+                    You are responsible for how you use this feature and your
+                    device access.
                   </li>
                 </ul>
 
                 <div className="mt-4 rounded-xl border border-black/10 bg-white/80 p-3">
-                  <div className="text-[12px] font-extrabold text-black/70">Emergency note</div>
-                  <div className="mt-1 text-[12px] text-black/65">If you feel unsafe or in immediate danger, contact local emergency services or a trusted person right away.</div>
+                  <div className="text-[12px] font-extrabold text-black/70">
+                    Emergency note
+                  </div>
+                  <div className="mt-1 text-[12px] text-black/65">
+                    If you feel unsafe or in immediate danger, contact local
+                    emergency services or a trusted person right away.
+                  </div>
                 </div>
               </div>
 
@@ -1346,13 +1874,22 @@ function TermsModal({ open, onAgree }) {
                   type="button"
                   onClick={onAgree}
                   className="h-11 rounded-full px-6 text-[13px] font-extrabold"
-                  style={{ backgroundColor: CHECKIN_DARK, color: "white", textTransform: "none", writingMode: "horizontal-tb", paddingRight: "20px", paddingLeft: "20px" }}
+                  style={{
+                    backgroundColor: CHECKIN_DARK,
+                    color: "white",
+                    textTransform: "none",
+                    writingMode: "horizontal-tb",
+                    paddingRight: "20px",
+                    paddingLeft: "20px",
+                  }}
                 >
                   Agree & Continue
                 </button>
               </div>
 
-              <div className="mt-3 text-[11px] text-black/55 font-semibold">You cannot proceed without accepting.</div>
+              <div className="mt-3 text-[11px] text-black/55 font-semibold">
+                You cannot proceed without accepting.
+              </div>
             </div>
           </motion.div>
         </motion.div>
@@ -1407,9 +1944,14 @@ function NotesCard({ notes, setNotes, disabled = false }) {
   return (
     <div className="rounded-[24px] border border-black/10 bg-white shadow-[0_14px_40px_rgba(0,0,0,0.07)] overflow-hidden">
       <div className="px-5 py-4 bg-black/[0.02] flex items-center justify-between gap-2">
-        <div className="text-[14px] lg:text-[16px] font-extrabold text-[#141414] flex items-center gap-2" style={{ fontFamily: "Lora, serif" }}>
+        <div
+          className="text-[14px] lg:text-[16px] font-extrabold text-[#141414] flex items-center gap-2"
+          style={{ fontFamily: "Lora, serif" }}
+        >
           Notes
-          <span className="text-[11px] font-extrabold text-black/35">(optional)</span>
+          <span className="text-[11px] font-extrabold text-black/35">
+            (optional)
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -1432,10 +1974,15 @@ function NotesCard({ notes, setNotes, disabled = false }) {
       <div className="p-5 lg:p-6">
         {disabled ? (
           <>
-            <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-[13px] text-black/80 whitespace-pre-wrap" style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>
+            <div
+              className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 text-[13px] text-black/80 whitespace-pre-wrap"
+              style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+            >
               {safeText(notes)}
             </div>
-            <div className="mt-3 text-[12px] text-black/60">Saved today — notes are view-only.</div>
+            <div className="mt-3 text-[12px] text-black/60">
+              Saved today — notes are view-only.
+            </div>
           </>
         ) : (
           <>
@@ -1446,14 +1993,181 @@ function NotesCard({ notes, setNotes, disabled = false }) {
               placeholder="One sentence is enough — what happened today?"
               className="w-full min-h-[150px] lg:min-h-[180px] rounded-2xl border border-black/10 bg-white px-4 py-3 text-[13px] lg:text-[14px] text-black/80 outline-none focus:border-black/25 focus-visible:ring-2 focus-visible:ring-black/20 focus-visible:ring-offset-2"
             />
-            <div className="mt-3 text-[12px] text-black/60">Optional, but helpful for reflection.</div>
+            <div className="mt-3 text-[12px] text-black/60">
+              Optional, but helpful for reflection.
+            </div>
           </>
         )}
       </div>
     </div>
   );
 }
+const JOURNAL_TUTORIAL_KEY = "checkin:tutorial:journal";
 
+function readTutorialSeen(key) {
+  try {
+    return window.localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markTutorialSeen(key) {
+  try {
+    window.localStorage.setItem(key, "1");
+  } catch {
+    // ignore
+  }
+}
+
+function getTutorialRect(node) {
+  if (!node || typeof node.getBoundingClientRect !== "function") return null;
+  const rect = node.getBoundingClientRect();
+  return {
+    top: Math.max(10, rect.top - 10),
+    left: Math.max(10, rect.left - 10),
+    width: Math.max(96, rect.width + 20),
+    height: Math.max(52, rect.height + 20),
+  };
+}
+
+function ServiceTutorialOverlay({
+  open,
+  steps,
+  stepIndex,
+  onNext,
+  onSkip,
+  ariaLabel = "Journal tutorial",
+  accentColor = "#B9FF66",
+  accentText = "#141414",
+}) {
+  const step = steps?.[stepIndex] || null;
+  const [rect, setRect] = useState(null);
+
+  useEffect(() => {
+    if (!open || !step?.targetRef?.current) {
+      setRect(null);
+      return undefined;
+    }
+
+    const target = step.targetRef.current;
+    const update = () => setRect(getTutorialRect(target));
+
+    target.scrollIntoView?.({
+      behavior: "smooth",
+      block: "center",
+      inline: "center",
+    });
+    update();
+
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, step]);
+
+  if (!open || !step) return null;
+
+  const isLast = stepIndex === steps.length - 1;
+  const viewportW = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const viewportH = typeof window !== "undefined" ? window.innerHeight : 720;
+  const cardWidth = Math.min(360, viewportW - 32);
+
+  const cardTop = rect
+    ? rect.top + rect.height + 18 + 210 > viewportH
+      ? Math.max(18, rect.top - 198)
+      : rect.top + rect.height + 18
+    : 24;
+
+  const cardLeft = rect
+    ? Math.min(Math.max(16, rect.left), viewportW - cardWidth - 16)
+    : 16;
+
+  return (
+    <div className="fixed inset-0 z-[140]">
+      <button
+        type="button"
+        aria-label="Skip tutorial"
+        onClick={onSkip}
+        className="absolute inset-0 bg-black/45"
+      />
+
+      {rect && (
+        <div
+          className="pointer-events-none fixed rounded-[26px] border border-white/80 transition-all duration-200"
+          style={{
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+            boxShadow: "0 0 0 9999px rgba(20,20,20,0.42)",
+          }}
+        />
+      )}
+
+      <div
+        className="fixed rounded-[26px] border border-white/15 bg-[#141414] text-white shadow-[0_24px_80px_rgba(0,0,0,0.35)] p-5 sm:p-6"
+        style={{
+          top: cardTop,
+          left: cardLeft,
+          width: cardWidth,
+          maxWidth: "calc(100vw - 32px)",
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[12px] font-black uppercase tracking-[0.16em] text-white/55">
+              Step {stepIndex + 1} of {steps.length}
+            </div>
+            <div className="mt-2 text-[18px] font-black leading-tight">
+              {step.title}
+            </div>
+            <p className="mt-2 text-[14px] leading-relaxed text-white/78">
+              {step.description}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onSkip}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-lg font-black text-white/80 transition hover:bg-white/10"
+            aria-label="Close tutorial"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onSkip}
+            className="rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-[14px] font-extrabold text-white/82 transition hover:bg-white/10"
+          >
+            Skip
+          </button>
+
+          <button
+            type="button"
+            onClick={onNext}
+            className="rounded-full px-5 py-2.5 text-[14px] font-extrabold transition"
+            style={{
+              backgroundColor: accentColor,
+              color: accentText,
+              boxShadow: "0 16px 40px rgba(185,255,102,0.28)",
+            }}
+          >
+            {isLast ? "Done" : "Next"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 /** =========================
     Main Journal Page
 ========================= */
@@ -1464,10 +2178,109 @@ export default function Journal() {
   const { userId } = getAuthFromStorage();
   const entriesStorageKey = entriesKeyForUser(userId);
   const termsStorageKey = termsKeyForUser(userId);
+  const headingRef = useRef(null);
+  const stepsNavRef = useRef(null);
+  const moodTrackerRef = useRef(null);
+  const moodCardRef = useRef(null);
+  const copingCardRef = useRef(null);
+  const reasonCardRef = useRef(null);
+  const wellnessTipsRef = useRef(null);
+  const notesCardRef = useRef(null);
+  const actionsRef = useRef(null);
 
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
   const [todayKey, setTodayKey] = useState(() => getTodayKey());
-  const [termsAccepted, setTermsAccepted] = useState(() => loadTermsAccepted(termsStorageKey));
+  const [termsAccepted, setTermsAccepted] = useState(() =>
+    loadTermsAccepted(termsStorageKey),
+  );
+  const tutorialSteps = useMemo(
+    () => [
+      {
+        targetRef: headingRef,
+        title: "Welcome to your Journal",
+        description:
+          "Use this space for a quick daily check-in — mood, reason, optional notes, and coping you tried.",
+      },
+      {
+        targetRef: moodTrackerRef,
+        title: "Mood Tracker",
+        description:
+          "See your saved moods over the last 7 days. Today’s point shows your latest saved mood.",
+      },
+      {
+        targetRef: stepsNavRef,
+        title: "Daily progress",
+        description:
+          "Jump between Mood, Reason, Notes, Coping, and Done. Finish what matters most first.",
+      },
+      {
+        targetRef: moodCardRef,
+        title: "Mood",
+        description:
+          "Pick how you feel today. This drives your tracker and can personalize tips.",
+      },
+      {
+        targetRef: copingCardRef,
+        title: "Coping",
+        description:
+          "Tap what you tried today (breathing, walk/stretch, music, etc.). Tap again to remove.",
+      },
+      {
+        targetRef: reasonCardRef,
+        title: "Reason",
+        description:
+          "Choose what’s influencing your mood (school, family, friends, health, other).",
+      },
+      {
+        targetRef: wellnessTipsRef,
+        title: "Wellness Tips",
+        description:
+          "Helpful suggestions based on your mood + reason. Unlocks after accepting Terms.",
+      },
+      {
+        targetRef: notesCardRef,
+        title: "Notes",
+        description:
+          "Optional space to capture what happened, what helped, and what you want to remember.",
+      },
+      {
+        targetRef: actionsRef,
+        title: "Save & review",
+        description:
+          "Use History to review entries, Clear to reset today’s draft, and Save when ready.",
+      },
+    ],
+    [],
+  );
 
+  const closeTutorial = useCallback(() => {
+    markTutorialSeen(JOURNAL_TUTORIAL_KEY);
+    setTutorialOpen(false);
+    setTutorialStep(0);
+  }, []);
+
+  const nextTutorialStep = useCallback(() => {
+    setTutorialStep((prev) => {
+      if (prev >= tutorialSteps.length - 1) {
+        closeTutorial();
+        return 0;
+      }
+      return prev + 1;
+    });
+  }, [closeTutorial, tutorialSteps.length]);
+
+  useEffect(() => {
+    if (!termsAccepted) return;
+    if (readTutorialSeen(JOURNAL_TUTORIAL_KEY)) return;
+
+    const id = window.setTimeout(() => {
+      setTutorialOpen(true);
+      setTutorialStep(0);
+    }, 600);
+
+    return () => window.clearTimeout(id);
+  }, [termsAccepted]);
   /** ✅ Refresh “Today” on focus + at local midnight */
   useEffect(() => {
     const tick = () => {
@@ -1477,7 +2290,15 @@ export default function Journal() {
 
     const scheduleMidnight = () => {
       const now = new Date();
-      const nextMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1, 0);
+      const nextMidnight = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + 1,
+        0,
+        0,
+        1,
+        0,
+      );
       const ms = Math.max(250, nextMidnight.getTime() - now.getTime());
       return window.setTimeout(() => {
         tick();
@@ -1505,7 +2326,10 @@ export default function Journal() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entriesStorageKey, termsStorageKey]);
 
-  const savedEntry = useMemo(() => getEntry(entries, todayKey), [entries, todayKey]);
+  const savedEntry = useMemo(
+    () => getEntry(entries, todayKey),
+    [entries, todayKey],
+  );
 
   /** =========================
       LOAD FROM CLOUD (per user)
@@ -1526,7 +2350,12 @@ export default function Journal() {
         d.setDate(d.getDate() - 180);
         const from = d.toISOString().slice(0, 10);
 
-        const cloudEntries = await apiListJournalEntries({ from, to, limit: 1000, signal: ac.signal });
+        const cloudEntries = await apiListJournalEntries({
+          from,
+          to,
+          limit: 1000,
+          signal: ac.signal,
+        });
         if (!alive) return;
 
         if (cloudEntries.length) {
@@ -1539,13 +2368,15 @@ export default function Journal() {
             const localTs = Number(local.clientUpdatedAt || 0);
             const cloudTs = Number(ce.clientUpdatedAt || 0);
 
-            const cloudWins = cloudTs >= localTs || (ce.daySubmitted && !local.daySubmitted);
+            const cloudWins =
+              cloudTs >= localTs || (ce.daySubmitted && !local.daySubmitted);
 
             if (cloudWins) {
               merged[k] = ensureEntryShape({
                 ...local,
                 ...ce,
-                daySubmittedAt: ce.daySubmittedAt || local.daySubmittedAt || null,
+                daySubmittedAt:
+                  ce.daySubmittedAt || local.daySubmittedAt || null,
               });
             }
           }
@@ -1558,7 +2389,11 @@ export default function Journal() {
           setCloudIdle();
         }
       } catch (e) {
-        setCloudError(e?.message ? `Could not load cloud journal: ${e.message}` : "Could not load cloud journal.");
+        setCloudError(
+          e?.message
+            ? `Could not load cloud journal: ${e.message}`
+            : "Could not load cloud journal.",
+        );
       }
     })();
 
@@ -1575,7 +2410,9 @@ export default function Journal() {
   const [mood, setMood] = useState(savedEntry.mood || "");
   const [reason, setReason] = useState(savedEntry.reason || "");
   const [notes, setNotes] = useState(savedEntry.notes || "");
-  const [copingUsed, setCopingUsed] = useState(Array.isArray(savedEntry.copingUsed) ? savedEntry.copingUsed : []);
+  const [copingUsed, setCopingUsed] = useState(
+    Array.isArray(savedEntry.copingUsed) ? savedEntry.copingUsed : [],
+  );
   const [moodCollapsed, setMoodCollapsed] = useState(false);
 
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -1637,7 +2474,7 @@ export default function Journal() {
   const saveTimer = useRef(null);
 
   /** ✅ Notes are optional */
-    /** ✅ Notes and Coping are optional (but tracked) */
+  /** ✅ Notes and Coping are optional (but tracked) */
   const step = useMemo(() => {
     if (!termsAccepted) return "terms";
     if (dayLocked) return "save";
@@ -1654,7 +2491,7 @@ export default function Journal() {
     return "save";
   }, [termsAccepted, dayLocked, mood, reason, notes, copingUsed]);
 
-    const progress = useMemo(() => {
+  const progress = useMemo(() => {
     if (!termsAccepted) return 0;
     let p = 0;
 
@@ -1680,14 +2517,29 @@ export default function Journal() {
       if (inputsDisabled) return;
       if (k === "mood") {
         setMoodCollapsed(false);
-        focusMoodRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+        focusMoodRef.current?.scrollIntoView?.({
+          behavior: "smooth",
+          block: "start",
+        });
       }
-      if (k === "reason") focusReasonRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-      if (k === "notes") focusNotesRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
-      if (k === "coping") focusCopingRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      if (k === "reason")
+        focusReasonRef.current?.scrollIntoView?.({
+          behavior: "smooth",
+          block: "start",
+        });
+      if (k === "notes")
+        focusNotesRef.current?.scrollIntoView?.({
+          behavior: "smooth",
+          block: "start",
+        });
+      if (k === "coping")
+        focusCopingRef.current?.scrollIntoView?.({
+          behavior: "smooth",
+          block: "start",
+        });
       if (k === "save") window.scrollTo({ top: 0, behavior: "smooth" });
     },
-    [inputsDisabled]
+    [inputsDisabled],
   );
 
   /** keep inputs synced when day changes */
@@ -1731,7 +2583,10 @@ export default function Journal() {
     try {
       return await apiUpsertJournalEntry(dateKey, payload, { signal });
     } catch (err) {
-      if (cloudSupportsCoping.current && Object.prototype.hasOwnProperty.call(payload || {}, "copingUsed")) {
+      if (
+        cloudSupportsCoping.current &&
+        Object.prototype.hasOwnProperty.call(payload || {}, "copingUsed")
+      ) {
         try {
           const { copingUsed: _drop, ...rest } = payload || {};
           const res = await apiUpsertJournalEntry(dateKey, rest, { signal });
@@ -1777,7 +2632,12 @@ export default function Journal() {
 
       pendingCloudRef.current = {
         dateKey: todayKey,
-        payload: cloudSupportsCoping.current ? { ...basePayload, copingUsed: Array.isArray(copingUsed) ? copingUsed : [] } : basePayload,
+        payload: cloudSupportsCoping.current
+          ? {
+              ...basePayload,
+              copingUsed: Array.isArray(copingUsed) ? copingUsed : [],
+            }
+          : basePayload,
       };
 
       if (cloudTimer.current) window.clearTimeout(cloudTimer.current);
@@ -1790,17 +2650,35 @@ export default function Journal() {
           if (cloudAbort.current) cloudAbort.current.abort();
           cloudAbort.current = new AbortController();
 
-          await upsertCloudWithFallback(pending.dateKey, pending.payload, { signal: cloudAbort.current.signal });
+          await upsertCloudWithFallback(pending.dateKey, pending.payload, {
+            signal: cloudAbort.current.signal,
+          });
           pendingCloudRef.current = null;
           setCloudSaved();
         } catch (e) {
-          setCloudError(e?.message ? `Cloud sync failed: ${e.message}` : "Cloud sync failed. Saved locally.");
+          setCloudError(
+            e?.message
+              ? `Cloud sync failed: ${e.message}`
+              : "Cloud sync failed. Saved locally.",
+          );
         }
       }, 900);
     }, 450);
 
     return () => window.clearTimeout(t);
-  }, [inputsDisabled, termsAccepted, dayLocked, isDirty, entries, todayKey, mood, reason, notes, copingUsed, entriesStorageKey]);
+  }, [
+    inputsDisabled,
+    termsAccepted,
+    dayLocked,
+    isDirty,
+    entries,
+    todayKey,
+    mood,
+    reason,
+    notes,
+    copingUsed,
+    entriesStorageKey,
+  ]);
 
   // ✅ On refresh/close: force-save latest draft to localStorage synchronously
   useEffect(() => {
@@ -1826,7 +2704,19 @@ export default function Journal() {
 
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [inputsDisabled, termsAccepted, dayLocked, isDirty, entries, todayKey, mood, reason, notes, copingUsed, entriesStorageKey]);
+  }, [
+    inputsDisabled,
+    termsAccepted,
+    dayLocked,
+    isDirty,
+    entries,
+    todayKey,
+    mood,
+    reason,
+    notes,
+    copingUsed,
+    entriesStorageKey,
+  ]);
 
   // Retry any pending cloud save when browser comes back online
   useEffect(() => {
@@ -1839,14 +2729,30 @@ export default function Journal() {
         pendingCloudRef.current = null;
         setCloudSaved("Synced after reconnect.");
       } catch (e) {
-        setCloudError(e?.message ? `Cloud sync failed: ${e.message}` : "Cloud sync failed. Saved locally.");
+        setCloudError(
+          e?.message
+            ? `Cloud sync failed: ${e.message}`
+            : "Cloud sync failed. Saved locally.",
+        );
       }
     };
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
   }, []);
 
-  const wellness = useMemo(() => tipsForEntry(savedEntry), [savedEntry]);
+  const wellnessUnlocked = !!termsAccepted && !!mood && !!reason;
+
+  const wellness = useMemo(
+    () =>
+      tipsForEntry({
+        ...savedEntry,
+        mood,
+        reason,
+        notes,
+        daySubmitted: wellnessUnlocked,
+      }),
+    [savedEntry, mood, reason, notes, wellnessUnlocked],
+  );
 
   const canSave = useMemo(() => {
     if (inputsDisabled) return false;
@@ -1894,9 +2800,16 @@ export default function Journal() {
         clientUpdatedAt: Date.now(),
       };
 
-      const payload = cloudSupportsCoping.current ? { ...basePayload, copingUsed: Array.isArray(copingUsed) ? copingUsed : [] } : basePayload;
+      const payload = cloudSupportsCoping.current
+        ? {
+            ...basePayload,
+            copingUsed: Array.isArray(copingUsed) ? copingUsed : [],
+          }
+        : basePayload;
 
-      await upsertCloudWithFallback(todayKey, payload, { signal: cloudAbort.current.signal });
+      await upsertCloudWithFallback(todayKey, payload, {
+        signal: cloudAbort.current.signal,
+      });
       pendingCloudRef.current = null;
       setCloudSaved("Finalized and saved to cloud.");
     } catch (e) {
@@ -1909,9 +2822,18 @@ export default function Journal() {
       };
       pendingCloudRef.current = {
         dateKey: todayKey,
-        payload: cloudSupportsCoping.current ? { ...basePayload, copingUsed: Array.isArray(copingUsed) ? copingUsed : [] } : basePayload,
+        payload: cloudSupportsCoping.current
+          ? {
+              ...basePayload,
+              copingUsed: Array.isArray(copingUsed) ? copingUsed : [],
+            }
+          : basePayload,
       };
-      setCloudError(e?.message ? `Cloud save failed: ${e.message}` : "Cloud save failed. Saved locally.");
+      setCloudError(
+        e?.message
+          ? `Cloud save failed: ${e.message}`
+          : "Cloud save failed. Saved locally.",
+      );
     }
   }
 
@@ -1925,7 +2847,14 @@ export default function Journal() {
     setMoodCollapsed(false);
     setSaveFailed(false);
 
-    const next = setEntry(entries, todayKey, { mood: "", reason: "", notes: "", copingUsed: [], daySubmitted: false, daySubmittedAt: null });
+    const next = setEntry(entries, todayKey, {
+      mood: "",
+      reason: "",
+      notes: "",
+      copingUsed: [],
+      daySubmitted: false,
+      daySubmittedAt: null,
+    });
     commitEntries(next);
   }
 
@@ -1936,16 +2865,34 @@ export default function Journal() {
       if (!value) return;
       setCopingUsed((prev) => {
         const list = Array.isArray(prev) ? prev : [];
-        return list.includes(value) ? list.filter((x) => x !== value) : [...list, value];
+        return list.includes(value)
+          ? list.filter((x) => x !== value)
+          : [...list, value];
       });
     },
-    [inputsDisabled]
+    [inputsDisabled],
   );
 
-  const trackerSeries = useMemo(() => buildTrackerSeries(entries, todayKey, TRACKER_DAYS), [entries, todayKey]);
-  const trackerSeriesForDate = useCallback((baseDate) => buildTrackerSeries(entries, baseDate, TRACKER_DAYS), [entries]);
+  const trackerSeries = useMemo(
+    () => buildTrackerSeries(entries, todayKey, TRACKER_DAYS),
+    [entries, todayKey],
+  );
+  const trackerSeriesForDate = useCallback(
+    (baseDate) => buildTrackerSeries(entries, baseDate, TRACKER_DAYS),
+    [entries],
+  );
 
-  const moods = ["Happy", "Calm", "Okay", "Stressed", "Sad", "Angry", "Fear", "Surprise", "Disgust"];
+  const moods = [
+    "Happy",
+    "Calm",
+    "Okay",
+    "Stressed",
+    "Sad",
+    "Angry",
+    "Fear",
+    "Surprise",
+    "Disgust",
+  ];
   const reasons = ["School", "Family", "Friends", "Health", "Other"];
 
   /** ✅ History: includes coping preview */
@@ -1969,11 +2916,20 @@ export default function Journal() {
       .map((k) => {
         const e = getEntry(entries, k);
 
-        const hasText = !!(e.mood || e.reason || (e.notes || "").trim() || (Array.isArray(e.copingUsed) && e.copingUsed.length));
+        const hasText = !!(
+          e.mood ||
+          e.reason ||
+          (e.notes || "").trim() ||
+          (Array.isArray(e.copingUsed) && e.copingUsed.length)
+        );
         if (!hasText) return null;
 
         const noteTrim = (e.notes || "").trim();
-        const notesPreview = noteTrim ? (noteTrim.length > 22 ? `${noteTrim.slice(0, 22)}…` : noteTrim) : "";
+        const notesPreview = noteTrim
+          ? noteTrim.length > 22
+            ? `${noteTrim.slice(0, 22)}…`
+            : noteTrim
+          : "";
 
         const w = tipsForEntry(e);
         const wellnessPreview = truncate(w?.tips?.[0] || "");
@@ -1999,7 +2955,7 @@ export default function Journal() {
     };
   }, []);
 
-    const nudgeText = useMemo(() => {
+  const nudgeText = useMemo(() => {
     if (!termsAccepted) return "Please accept Terms & Conditions to continue.";
     if (dayLocked) return "Nice work — you’ve completed today’s check-in!";
     if (!mood) return "Step 1: choose your mood.";
@@ -2008,21 +2964,33 @@ export default function Journal() {
     const hasNotes = (notes || "").trim().length > 0;
     const hasCoping = Array.isArray(copingUsed) && copingUsed.length > 0;
 
-    if (!hasNotes && !hasCoping) return "Optional: add a short note or coping — or Save to lock today.";
+    if (!hasNotes && !hasCoping)
+      return "Optional: add a short note or coping — or Save to lock today.";
     if (!hasNotes) return "Optional: add a short note — or Save to lock today.";
-    if (!hasCoping) return "Optional: add a coping strategy — or Save to lock today.";
+    if (!hasCoping)
+      return "Optional: add a coping strategy — or Save to lock today.";
     return "Final step: Save to lock today.";
   }, [termsAccepted, dayLocked, mood, reason, notes, copingUsed]);
 
-  const savedTimeLabel = useMemo(() => (savedEntry?.daySubmittedAt ? formatNiceTime(savedEntry.daySubmittedAt) : ""), [savedEntry]);
+  const savedTimeLabel = useMemo(
+    () =>
+      savedEntry?.daySubmittedAt
+        ? formatNiceTime(savedEntry.daySubmittedAt)
+        : "",
+    [savedEntry],
+  );
 
-  const activeEmoteAnim = useMemo(() => (shouldReduceMotion ? {} : { y: [0, -2, 0] }), [shouldReduceMotion]);
+  const activeEmoteAnim = useMemo(
+    () => (shouldReduceMotion ? {} : { y: [0, -2, 0] }),
+    [shouldReduceMotion],
+  );
 
   return (
     <div
       className="min-h-screen relative overflow-hidden"
       style={{
-        fontFamily: "Nunito, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+        fontFamily:
+          "Nunito, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
         background: `
           radial-gradient(1100px 520px at 18% 0%, rgba(185,255,102,0.48) 0%, rgba(185,255,102,0.00) 58%),
           radial-gradient(980px 480px at 70% 6%, rgba(218,252,182,0.55) 0%, rgba(218,252,182,0.00) 62%),
@@ -2046,15 +3014,33 @@ export default function Journal() {
         }}
       />
 
-      <HistoryModal open={historyOpen} onClose={() => setHistoryOpen(false)} items={historyItems} entries={entries} trackerSeriesForDate={trackerSeriesForDate} todayKey={todayKey} />
-
+      <HistoryModal
+        open={historyOpen}
+        onClose={() => setHistoryOpen(false)}
+        items={historyItems}
+        entries={entries}
+        trackerSeriesForDate={trackerSeriesForDate}
+        todayKey={todayKey}
+      />
+      <ServiceTutorialOverlay
+        open={tutorialOpen}
+        steps={tutorialSteps}
+        stepIndex={tutorialStep}
+        onNext={nextTutorialStep}
+        onSkip={closeTutorial}
+        ariaLabel="Journal tutorial"
+      />
       <div className="pt-[56px] sm:pt-[66px] pb-10 relative z-[1]">
         <div className="max-w-6xl mx-auto px-3 sm:px-6">
           <div className="sticky top-[68px] sm:top-[72px] z-20 -mx-3 sm:-mx-6 px-3 sm:px-6 pt-3 pb-3">
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.25, ease: "easeOut" }}
+              transition={
+                shouldReduceMotion
+                  ? { duration: 0 }
+                  : { duration: 0.25, ease: "easeOut" }
+              }
               className="relative rounded-[28px] border border-black/10 bg-white/78 backdrop-blur-xl shadow-[0_22px_70px_rgba(0,0,0,0.10)] p-5 sm:p-6 lg:p-7 flex flex-col gap-4 overflow-hidden"
             >
               <div
@@ -2068,59 +3054,117 @@ export default function Journal() {
               <motion.div
                 className="absolute inset-0 opacity-[0.10]"
                 style={{
-                  backgroundImage: "radial-gradient(rgba(0,0,0,0.35) 1px, transparent 1px)",
+                  backgroundImage:
+                    "radial-gradient(rgba(0,0,0,0.35) 1px, transparent 1px)",
                   backgroundSize: "24px 24px",
-                  maskImage: "radial-gradient(800px 260px at 30% 20%, black 0%, transparent 70%)",
-                  WebkitMaskImage: "radial-gradient(800px 260px at 30% 20%, black 0%, transparent 70%)",
+                  maskImage:
+                    "radial-gradient(800px 260px at 30% 20%, black 0%, transparent 70%)",
+                  WebkitMaskImage:
+                    "radial-gradient(800px 260px at 30% 20%, black 0%, transparent 70%)",
                 }}
-                animate={shouldReduceMotion ? {} : { backgroundPosition: ["0px 0px", "24px 24px"] }}
-                transition={shouldReduceMotion ? {} : { duration: 10, repeat: Infinity, ease: "linear" }}
+                animate={
+                  shouldReduceMotion
+                    ? {}
+                    : { backgroundPosition: ["0px 0px", "24px 24px"] }
+                }
+                transition={
+                  shouldReduceMotion
+                    ? {}
+                    : { duration: 10, repeat: Infinity, ease: "linear" }
+                }
               />
 
               <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div className="relative">
-                  <div className="text-[22px] sm:text-[26px] lg:text-[30px] font-black text-[#141414] leading-tight" style={{ fontFamily: "Lora, serif" }}>
-                    How are you today?
-                  </div>
+                  <div ref={headingRef} className="relative">
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div
+                        className="text-[22px] sm:text-[26px] lg:text-[30px] font-black text-[#141414] leading-tight"
+                        style={{ fontFamily: "Lora, serif" }}
+                      >
+                        How are you today?
+                      </div>
 
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!termsAccepted) return;
+                          setTutorialStep(0);
+                          setTutorialOpen(true);
+                        }}
+                        disabled={!termsAccepted}
+                        className="inline-flex items-center gap-2 rounded-full border border-black/15 bg-white/78 px-4 py-2 text-[13px] font-extrabold text-black/70 hover:bg-black/5 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        ℹ️ Instructions
+                      </button>
+                    </div>
+
+                    {/* keep your AnimatePresence block as-is below */}
+                  </div>
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={nudgeText}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
-                      transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18 }}
+                      transition={
+                        shouldReduceMotion
+                          ? { duration: 0 }
+                          : { duration: 0.18 }
+                      }
                       className="mt-2 text-[12px] lg:text-[13px] font-extrabold text-black/60"
                     >
                       {nudgeText}
                     </motion.div>
                   </AnimatePresence>
 
-                  {saveFailed && <div className="mt-2 text-[11px] font-semibold text-red-600">Storage error: couldn’t save on this device.</div>}
+                  {saveFailed && (
+                    <div className="mt-2 text-[11px] font-semibold text-red-600">
+                      Storage error: couldn’t save on this device.
+                    </div>
+                  )}
 
                   {showCloudPill && cloudSync.status !== "idle" && (
                     <div className="mt-2">
-                      <CloudStatusPill status={cloudSync.status} message={cloudSync.message} />
+                      <CloudStatusPill
+                        status={cloudSync.status}
+                        message={cloudSync.message}
+                      />
                     </div>
                   )}
                 </div>
 
-                <div className="relative flex flex-wrap items-center gap-2 justify-start lg:justify-end">
+                <div
+                  ref={actionsRef}
+                  className="relative flex flex-wrap items-center gap-2 justify-start lg:justify-end"
+                >
                   <div className="inline-flex items-center gap-2 h-10 rounded-full border border-black/15 bg-white/85 backdrop-blur px-4 text-[13px] font-extrabold text-black/70">
                     <IconCalendar className="h-5 w-5 text-black/45" />
                     <span>Today</span>
                     <span className="text-black/35">•</span>
-                    <span className="font-black text-black/75">{formatNiceDate(todayKey)}</span>
+                    <span className="font-black text-black/75">
+                      {formatNiceDate(todayKey)}
+                    </span>
                   </div>
 
-                  <button type="button" onClick={() => setHistoryOpen(true)} className="h-10 rounded-full border border-black/15 bg-white/85 backdrop-blur px-4 text-[13px] font-extrabold text-black/70 hover:bg-black/5 transition">
+                  <button
+                    type="button"
+                    onClick={() => setHistoryOpen(true)}
+                    className="h-10 rounded-full border border-black/15 bg-white/85 backdrop-blur px-4 text-[13px] font-extrabold text-black/70 hover:bg-black/5 transition"
+                  >
                     History
                   </button>
 
                   <button
                     type="button"
                     onClick={clearTodayDraft}
-                    disabled={inputsDisabled || (!mood && !reason && !notes && (!Array.isArray(copingUsed) || copingUsed.length === 0))}
+                    disabled={
+                      inputsDisabled ||
+                      (!mood &&
+                        !reason &&
+                        !notes &&
+                        (!Array.isArray(copingUsed) || copingUsed.length === 0))
+                    }
                     className="h-10 rounded-full border border-black/15 bg-white/85 backdrop-blur px-4 text-[13px] font-extrabold text-black/70 hover:bg-black/5 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Clear
@@ -2130,14 +3174,26 @@ export default function Journal() {
                     type="button"
                     onClick={saveNow}
                     disabled={inputsDisabled || dayLocked || !canSave}
-                    whileHover={inputsDisabled || dayLocked || !canSave ? {} : { y: -1 }}
-                    whileTap={inputsDisabled || dayLocked || !canSave ? {} : { scale: 0.98 }}
+                    whileHover={
+                      inputsDisabled || dayLocked || !canSave ? {} : { y: -1 }
+                    }
+                    whileTap={
+                      inputsDisabled || dayLocked || !canSave
+                        ? {}
+                        : { scale: 0.98 }
+                    }
                     className="h-10 rounded-full px-4 text-[13px] font-extrabold transition disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{
-                      backgroundColor: !inputsDisabled && !dayLocked && canSave ? CHECKIN_GREEN : "rgba(0,0,0,0.05)",
+                      backgroundColor:
+                        !inputsDisabled && !dayLocked && canSave
+                          ? CHECKIN_GREEN
+                          : "rgba(0,0,0,0.05)",
                       color: CHECKIN_DARK,
                       border: "1px solid rgba(0,0,0,0.15)",
-                      boxShadow: !inputsDisabled && !dayLocked && canSave ? "0 18px 50px rgba(185,255,102,0.45)" : "none",
+                      boxShadow:
+                        !inputsDisabled && !dayLocked && canSave
+                          ? "0 18px 50px rgba(185,255,102,0.45)"
+                          : "none",
                     }}
                   >
                     {dayLocked ? "Saved ✓" : "Save"}
@@ -2146,16 +3202,34 @@ export default function Journal() {
                   <div className="ml-1" aria-live="polite">
                     <AnimatePresence mode="wait">
                       <motion.div
-                        key={savedPulse ? "saved" : dayLocked ? "locked" : inputsDisabled ? "disabled" : isDirty ? "dirty" : "idle"}
+                        key={
+                          savedPulse
+                            ? "saved"
+                            : dayLocked
+                              ? "locked"
+                              : inputsDisabled
+                                ? "disabled"
+                                : isDirty
+                                  ? "dirty"
+                                  : "idle"
+                        }
                         initial={{ opacity: 0, y: 6 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -6 }}
-                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18 }}
+                        transition={
+                          shouldReduceMotion
+                            ? { duration: 0 }
+                            : { duration: 0.18 }
+                        }
                       >
                         {savedPulse ? (
                           <Pill tone="green">Thank you 💚</Pill>
                         ) : dayLocked ? (
-                          <Pill tone="dark">{savedTimeLabel ? `Saved • ${savedTimeLabel}` : "Saved today"}</Pill>
+                          <Pill tone="dark">
+                            {savedTimeLabel
+                              ? `Saved • ${savedTimeLabel}`
+                              : "Saved today"}
+                          </Pill>
                         ) : !termsAccepted ? (
                           <Pill tone="warn">Accept Terms</Pill>
                         ) : isDirty ? (
@@ -2180,45 +3254,103 @@ export default function Journal() {
                   </div>
 
                   <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-black/10">
-                    <div className="h-full rounded-full transition-all duration-300" style={{ width: `${progress}%`, background: "linear-gradient(180deg, #B9FF66, #A3F635)" }} />
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${progress}%`,
+                        background: "linear-gradient(180deg, #B9FF66, #A3F635)",
+                      }}
+                    />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                <div
+                  ref={stepsNavRef}
+                  className="grid grid-cols-2 sm:grid-cols-5 gap-2"
+                >
                   {[
-                    { key: "mood", label: "Mood", icon: IconMood, done: !!mood },
-                    { key: "reason", label: "Reason", icon: IconReason, done: !!reason },
-                    { key: "notes", label: "Notes", icon: IconNotes, done: !!(notes || "").trim() },
-                    { key: "coping", label: "Coping", icon: IconCoping, done: Array.isArray(copingUsed) && copingUsed.length > 0 },
-                    { key: "save", label: "Done", icon: IconBolt, done: dayLocked },
+                    {
+                      key: "mood",
+                      label: "Mood",
+                      icon: IconMood,
+                      done: !!mood,
+                    },
+                    {
+                      key: "reason",
+                      label: "Reason",
+                      icon: IconReason,
+                      done: !!reason,
+                    },
+                    {
+                      key: "notes",
+                      label: "Notes",
+                      icon: IconNotes,
+                      done: !!(notes || "").trim(),
+                    },
+                    {
+                      key: "coping",
+                      label: "Coping",
+                      icon: IconCoping,
+                      done: Array.isArray(copingUsed) && copingUsed.length > 0,
+                    },
+                    {
+                      key: "save",
+                      label: "Done",
+                      icon: IconBolt,
+                      done: dayLocked,
+                    },
                   ].map((s) => {
                     const isActive = step === s.key;
                     const isDone = dayLocked ? true : s.done;
 
-                    return <MobileStepButton key={s.key} label={s.label} active={isActive} done={isDone} disabled={inputsDisabled} onClick={() => jumpToStep(s.key)} icon={s.icon} />;
+                    return (
+                      <MobileStepButton
+                        key={s.key}
+                        label={s.label}
+                        active={isActive}
+                        done={isDone}
+                        disabled={inputsDisabled}
+                        onClick={() => jumpToStep(s.key)}
+                        icon={s.icon}
+                      />
+                    );
                   })}
                 </div>
 
-                {!termsAccepted && <div className="mt-3 text-[12px] text-black/60 font-semibold">Accept Terms & Conditions to unlock the Journal.</div>}
+                {!termsAccepted && (
+                  <div className="mt-3 text-[12px] text-black/60 font-semibold">
+                    Accept Terms & Conditions to unlock the Journal.
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
 
-          <div className="mt-3">
-            <MoodTracker series={trackerSeries} todayKey={todayKey} subtitle="Saved mood for the last 7 days." />
+          <div ref={moodTrackerRef} className="mt-3">
+            <MoodTracker
+              series={trackerSeries}
+              todayKey={todayKey}
+              subtitle="Saved mood for the last 7 days."
+            />
           </div>
 
-          <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-4">
+          <div className="mt-4 grid grid-cols-1 xl:grid-cols-2 gap-4 items-stretch">
+            <div ref={moodCardRef} className="flex flex-col h-full">
               <div ref={focusMoodRef} />
               <Card
+                className="h-full"
                 title={
                   <span className="flex items-center gap-2">
                     Mood {inputsDisabled && <Pill>Locked</Pill>}
                   </span>
                 }
                 right={
-                  <button type="button" disabled={inputsDisabled} onClick={() => setMoodCollapsed((v) => !v)} className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[12px] font-extrabold disabled:opacity-50 disabled:cursor-not-allowed">
+                  <button
+                    type="button"
+                    disabled={inputsDisabled}
+                    onClick={() => setMoodCollapsed((v) => !v)}
+                    className="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[12px] font-extrabold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
                     {moodCollapsed ? "Expand" : "Collapse"}
                     <IconChevron className="h-4 w-4" down={moodCollapsed} />
                   </button>
@@ -2227,17 +3359,49 @@ export default function Journal() {
                 <motion.div
                   className="rounded-2xl border border-black/10 bg-black/[0.02] p-4 flex items-center gap-3"
                   initial={false}
-                  animate={!inputsDisabled && step === "mood" ? { boxShadow: "0 0 0 4px rgba(185,255,102,0.35)" } : { boxShadow: "0 0 0 0px rgba(0,0,0,0)" }}
-                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: "easeOut" }}
+                  animate={
+                    !inputsDisabled && step === "mood"
+                      ? { boxShadow: "0 0 0 4px rgba(185,255,102,0.35)" }
+                      : { boxShadow: "0 0 0 0px rgba(0,0,0,0)" }
+                  }
+                  transition={
+                    shouldReduceMotion
+                      ? { duration: 0 }
+                      : { duration: 0.22, ease: "easeOut" }
+                  }
                 >
-                  <div className="h-12 w-12 lg:h-14 lg:w-14 rounded-2xl border border-black/10 bg-white flex items-center justify-center overflow-hidden" style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.05)" }}>
+                  <div
+                    className="h-12 w-12 lg:h-14 lg:w-14 rounded-2xl border border-black/10 bg-white flex items-center justify-center overflow-hidden"
+                    style={{ boxShadow: "0 10px 24px rgba(0,0,0,0.05)" }}
+                  >
                     <AnimatePresence mode="wait">
                       {mood ? (
-                        <motion.div key={mood} initial={{ opacity: 0, scale: 0.85, rotate: -10, y: 6 }} animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }} exit={{ opacity: 0, scale: 0.88, rotate: 8, y: -6 }} transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.24, ease: "easeOut" }}>
+                        <motion.div
+                          key={mood}
+                          initial={{
+                            opacity: 0,
+                            scale: 0.85,
+                            rotate: -10,
+                            y: 6,
+                          }}
+                          animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.88, rotate: 8, y: -6 }}
+                          transition={
+                            shouldReduceMotion
+                              ? { duration: 0 }
+                              : { duration: 0.24, ease: "easeOut" }
+                          }
+                        >
                           <MoodEmote mood={mood} size={40} />
                         </motion.div>
                       ) : (
-                        <motion.div key="empty" className="text-[12px] font-extrabold text-black/40" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                        <motion.div
+                          key="empty"
+                          className="text-[12px] font-extrabold text-black/40"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                        >
                           —
                         </motion.div>
                       )}
@@ -2245,15 +3409,34 @@ export default function Journal() {
                   </div>
 
                   <div className="flex-1">
-                    <div className="text-[12px] font-extrabold text-black/70">Current mood</div>
-                    <div className="text-[14px] lg:text-[16px] font-extrabold text-[#141414] mt-1">{mood || "Not selected"}</div>
-                    <div className="text-[12px] text-black/55 font-semibold mt-1">{(mood || "").trim() ? MOOD_MESSAGE[(mood || "").trim()] || "Thanks for checking in." : "Pick a mood to begin."}</div>
+                    <div className="text-[12px] font-extrabold text-black/70">
+                      Current mood
+                    </div>
+                    <div className="text-[14px] lg:text-[16px] font-extrabold text-[#141414] mt-1">
+                      {mood || "Not selected"}
+                    </div>
+                    <div className="text-[12px] text-black/55 font-semibold mt-1">
+                      {(mood || "").trim()
+                        ? MOOD_MESSAGE[(mood || "").trim()] ||
+                          "Thanks for checking in."
+                        : "Pick a mood to begin."}
+                    </div>
                   </div>
                 </motion.div>
 
                 <AnimatePresence initial={false}>
                   {!moodCollapsed && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }} className="overflow-hidden">
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={
+                        shouldReduceMotion
+                          ? { duration: 0 }
+                          : { duration: 0.2, ease: "easeOut" }
+                      }
+                      className="overflow-hidden"
+                    >
                       <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2">
                         {moods.map((m) => (
                           <Chip
@@ -2266,8 +3449,28 @@ export default function Journal() {
                             left={
                               <motion.span
                                 initial={{ scale: 0.9 }}
-                                animate={shouldReduceMotion ? { scale: mood === m ? 1.06 : 1 } : mood === m ? { scale: 1.08, ...activeEmoteAnim } : { scale: 1 }}
-                                transition={shouldReduceMotion ? { duration: 0 } : mood === m ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" } : { type: "spring", stiffness: 300, damping: 18 }}
+                                animate={
+                                  shouldReduceMotion
+                                    ? { scale: mood === m ? 1.06 : 1 }
+                                    : mood === m
+                                      ? { scale: 1.08, ...activeEmoteAnim }
+                                      : { scale: 1 }
+                                }
+                                transition={
+                                  shouldReduceMotion
+                                    ? { duration: 0 }
+                                    : mood === m
+                                      ? {
+                                          duration: 1.2,
+                                          repeat: Infinity,
+                                          ease: "easeInOut",
+                                        }
+                                      : {
+                                          type: "spring",
+                                          stiffness: 300,
+                                          damping: 18,
+                                        }
+                                }
                               >
                                 <MoodEmote mood={m} size={18} />
                               </motion.span>
@@ -2279,15 +3482,89 @@ export default function Journal() {
                         ))}
                       </div>
 
-                      {!termsAccepted && <div className="mt-3 text-[12px] text-black/55 font-semibold">Accept Terms to unlock selections.</div>}
+                      {!termsAccepted && (
+                        <div className="mt-3 text-[12px] text-black/55 font-semibold">
+                          Accept Terms to unlock selections.
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
               </Card>
+            </div>
 
+            <div ref={copingCardRef} className="flex flex-col h-full">
+              <div ref={focusCopingRef} />
+              {/* ✅ Coping (chips only; dropdown removed) */}
+              <Card
+                className="h-full"
+                title={<span className="flex items-center gap-2">Coping</span>}
+                right={
+                  copingUsed.length ? (
+                    <Pill tone="green">{copingUsed.length} selected</Pill>
+                  ) : (
+                    <Pill>Optional</Pill>
+                  )
+                }
+              >
+                <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4">
+                  <div className="text-[12px] text-black/60 font-semibold mb-3">
+                    Tap what you tried today. Tap again to remove.
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {COPING_QUICK.map((c) => (
+                      <Chip
+                        key={c}
+                        active={copingUsed.includes(c)}
+                        onClick={() => toggleCoping(c)}
+                        disabled={inputsDisabled}
+                      >
+                        {c}
+                      </Chip>
+                    ))}
+                  </div>
+
+                  <div className="mt-3 text-[12px] text-black/60">
+                    <span className="font-extrabold text-black/70">
+                      Selected:
+                    </span>{" "}
+                    {copingUsed.length ? copingUsed.join(", ") : "—"}
+                  </div>
+
+                  {inputsDisabled && (
+                    <div className="mt-2 text-[12px] text-black/55 font-semibold">
+                      Saved today — coping is view-only.
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </div>
+
+            <div ref={reasonCardRef} className="flex flex-col h-full">
               <div ref={focusReasonRef} />
-              <Card title={<span className="flex items-center gap-2">Reason {inputsDisabled && <Pill>Locked</Pill>}</span>}>
-                <motion.div initial={false} animate={!inputsDisabled && step === "reason" ? { boxShadow: "0 0 0 4px rgba(185,255,102,0.35)" } : { boxShadow: "0 0 0 0px rgba(0,0,0,0)" }} transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: "easeOut" }} className="rounded-2xl">
+              <Card
+                className="h-full"
+                title={
+                  <span className="flex items-center gap-2">
+                    Reason {inputsDisabled && <Pill>Locked</Pill>}
+                  </span>
+                }
+              >
+                <motion.div
+                  initial={false}
+                  animate={
+                    !inputsDisabled && step === "reason"
+                      ? { boxShadow: "0 0 0 4px rgba(185,255,102,0.35)" }
+                      : { boxShadow: "0 0 0 0px rgba(0,0,0,0)" }
+                  }
+                  transition={
+                    shouldReduceMotion
+                      ? { duration: 0 }
+                      : { duration: 0.22, ease: "easeOut" }
+                  }
+                  className="rounded-2xl"
+                >
                   <div className="flex flex-wrap gap-2">
                     {reasons.map((r) => (
                       <Chip
@@ -2305,71 +3582,113 @@ export default function Journal() {
                   </div>
                 </motion.div>
 
-                {!termsAccepted && <div className="mt-3 text-[12px] text-black/55 font-semibold">Accept Terms to unlock selections.</div>}
+                {!termsAccepted && (
+                  <div className="mt-3 text-[12px] text-black/55 font-semibold">
+                    Accept Terms to unlock selections.
+                  </div>
+                )}
               </Card>
-
-              <div ref={focusNotesRef} />
-              <motion.div initial={false} animate={!inputsDisabled && step === "notes" ? { boxShadow: "0 0 0 4px rgba(185,255,102,0.35)", borderRadius: 28 } : { boxShadow: "0 0 0 0px rgba(0,0,0,0)", borderRadius: 28 }} transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: "easeOut" }}>
-                <NotesCard notes={notes} setNotes={setNotes} disabled={inputsDisabled} />
-              </motion.div>
             </div>
-
-            <div className="flex flex-col gap-4">
-              <div ref={focusCopingRef} />
-
-              {/* ✅ Coping (chips only; dropdown removed) */}
+            <div ref={wellnessTipsRef} className="flex flex-col h-full">
               <Card
-                title={
-                  <span className="flex items-center gap-2">Coping</span>
-                }
-                right={copingUsed.length ? <Pill tone="green">{copingUsed.length} selected</Pill> : <Pill>Optional</Pill>}
-              >
-                <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-4">
-                  <div className="text-[12px] text-black/60 font-semibold mb-3">Tap what you tried today. Tap again to remove.</div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {COPING_QUICK.map((c) => (
-                      <Chip key={c} active={copingUsed.includes(c)} onClick={() => toggleCoping(c)} disabled={inputsDisabled}>
-                        {c}
-                      </Chip>
-                    ))}
-                  </div>
-
-                  <div className="mt-3 text-[12px] text-black/60">
-                    <span className="font-extrabold text-black/70">Selected:</span>{" "}
-                    {copingUsed.length ? copingUsed.join(", ") : "—"}
-                  </div>
-
-                  {inputsDisabled && <div className="mt-2 text-[12px] text-black/55 font-semibold">Saved today — coping is view-only.</div>}
-                </div>
-              </Card>
-
-              <Card
+                className="h-full"
                 title={
                   <span className="flex items-center gap-2">
                     <IconWellness className="h-5 w-5 text-black/60" />
                     Wellness Tips
                   </span>
                 }
-                right={wellness.personalized ? <Pill tone="green">For you</Pill> : <Pill>General</Pill>}
+                right={
+                  wellnessUnlocked ? (
+                    wellness.personalized ? (
+                      <Pill tone="green">For you</Pill>
+                    ) : (
+                      <Pill>General</Pill>
+                    )
+                  ) : (
+                    <Pill>General</Pill>
+                  )
+                }
               >
-                <motion.div className="rounded-2xl border border-black/10 bg-black/[0.02] p-5 lg:p-6" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: "easeOut" }}>
-                  {wellness.personalized && <div className="text-[12px] text-black/55 font-semibold mb-3">Based on your mood + reason today.</div>}
+                {wellnessUnlocked ? (
+                  <motion.div
+                    className="rounded-2xl border border-black/10 bg-black/[0.02] p-5 lg:p-6"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={
+                      shouldReduceMotion
+                        ? { duration: 0 }
+                        : { duration: 0.22, ease: "easeOut" }
+                    }
+                  >
+                    {wellness.personalized && (
+                      <div className="text-[12px] text-black/55 font-semibold mb-3">
+                        Based on your mood + reason today.
+                      </div>
+                    )}
 
-                  <ul className="text-[13px] lg:text-[14px] text-black/70 leading-relaxed space-y-2">
-                    {wellness.tips.map((t, i) => (
-                      <motion.li key={i} className="flex items-start gap-2" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={shouldReduceMotion ? { duration: 0 } : { delay: 0.06 + i * 0.05, duration: 0.2, ease: "easeOut" }}>
-                        <span className="mt-[6px] h-2.5 w-2.5 rounded-full" style={{ backgroundColor: CHECKIN_GREEN }} />
-                        <span>{t}</span>
-                      </motion.li>
-                    ))}
-                  </ul>
+                    <ul className="text-[13px] lg:text-[14px] text-black/70 leading-relaxed space-y-2">
+                      {wellness.tips.map((t, i) => (
+                        <motion.li
+                          key={i}
+                          className="flex items-start gap-2"
+                          initial={{ opacity: 0, x: -6 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={
+                            shouldReduceMotion
+                              ? { duration: 0 }
+                              : {
+                                  delay: 0.06 + i * 0.05,
+                                  duration: 0.2,
+                                  ease: "easeOut",
+                                }
+                          }
+                        >
+                          <span
+                            className="mt-[6px] h-2.5 w-2.5 rounded-full"
+                            style={{ backgroundColor: CHECKIN_GREEN }}
+                          />
+                          <span>{t}</span>
+                        </motion.li>
+                      ))}
+                    </ul>
 
-                  {!termsAccepted && (
-                    <div className="mt-4 rounded-xl border border-black/10 bg-white/80 p-3 text-[12px] text-black/60 font-semibold">Tips will unlock after you accept Terms.</div>
-                  )}
-                </motion.div>
+                    {!termsAccepted && (
+                      <div className="mt-4 rounded-xl border border-black/10 bg-white/80 p-3 text-[12px] text-black/60 font-semibold">
+                        Tips will unlock after you accept Terms.
+                      </div>
+                    )}
+                  </motion.div>
+                ) : (
+                  <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-5 lg:p-6 min-h-[140px] h-full" />
+                )}
               </Card>
+            </div>
+
+            <div ref={notesCardRef} className="flex flex-col xl:col-span-2">
+              <div ref={focusNotesRef} />
+              <motion.div
+                initial={false}
+                animate={
+                  !inputsDisabled && step === "notes"
+                    ? {
+                        boxShadow: "0 0 0 4px rgba(185,255,102,0.35)",
+                        borderRadius: 28,
+                      }
+                    : { boxShadow: "0 0 0 0px rgba(0,0,0,0)", borderRadius: 28 }
+                }
+                transition={
+                  shouldReduceMotion
+                    ? { duration: 0 }
+                    : { duration: 0.22, ease: "easeOut" }
+                }
+              >
+                <NotesCard
+                  notes={notes}
+                  setNotes={setNotes}
+                  disabled={inputsDisabled}
+                />
+              </motion.div>
             </div>
           </div>
         </div>
@@ -2394,49 +3713,104 @@ function BackgroundFX() {
       <motion.div
         className="absolute -top-36 -left-36 h-[560px] w-[560px] rounded-full blur-3xl"
         style={blob("rgba(185,255,102,0.95)", "rgba(185,255,102,0.00)", 0.42)}
-        animate={reduce ? {} : { x: [0, 44, -24, 0], y: [0, 22, 56, 0], scale: [1, 1.08, 0.98, 1] }}
-        transition={reduce ? {} : { duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                x: [0, 44, -24, 0],
+                y: [0, 22, 56, 0],
+                scale: [1, 1.08, 0.98, 1],
+              }
+        }
+        transition={
+          reduce ? {} : { duration: 12, repeat: Infinity, ease: "easeInOut" }
+        }
       />
 
       <motion.div
         className="absolute -top-40 -right-44 h-[680px] w-[680px] rounded-full blur-3xl"
         style={blob("rgba(218,252,182,0.95)", "rgba(218,252,182,0.00)", 0.34)}
-        animate={reduce ? {} : { x: [0, -36, 18, 0], y: [0, 26, -14, 0], scale: [1, 1.06, 1.0, 1] }}
-        transition={reduce ? {} : { duration: 16, repeat: Infinity, ease: "easeInOut" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                x: [0, -36, 18, 0],
+                y: [0, 26, -14, 0],
+                scale: [1, 1.06, 1.0, 1],
+              }
+        }
+        transition={
+          reduce ? {} : { duration: 16, repeat: Infinity, ease: "easeInOut" }
+        }
       />
 
       <motion.div
         className="absolute top-[18%] left-[18%] h-[720px] w-[720px] rounded-full blur-3xl"
         style={blob("rgba(211,243,176,0.85)", "rgba(211,243,176,0.00)", 0.26)}
-        animate={reduce ? {} : { x: [0, 24, -18, 0], y: [0, -10, 20, 0], scale: [1, 1.04, 0.99, 1] }}
-        transition={reduce ? {} : { duration: 18, repeat: Infinity, ease: "easeInOut" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                x: [0, 24, -18, 0],
+                y: [0, -10, 20, 0],
+                scale: [1, 1.04, 0.99, 1],
+              }
+        }
+        transition={
+          reduce ? {} : { duration: 18, repeat: Infinity, ease: "easeInOut" }
+        }
       />
 
       <motion.div
         className="absolute -bottom-44 -left-40 h-[640px] w-[640px] rounded-full blur-3xl"
         style={blob("rgba(224,252,193,0.85)", "rgba(224,252,193,0.00)", 0.22)}
-        animate={reduce ? {} : { x: [0, 22, -10, 0], y: [0, -18, 12, 0], scale: [1, 1.05, 1.0, 1] }}
-        transition={reduce ? {} : { duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                x: [0, 22, -10, 0],
+                y: [0, -18, 12, 0],
+                scale: [1, 1.05, 1.0, 1],
+              }
+        }
+        transition={
+          reduce ? {} : { duration: 20, repeat: Infinity, ease: "easeInOut" }
+        }
       />
 
       <motion.div
         className="absolute top-[10%] right-[6%] h-[560px] w-[560px] rounded-full blur-3xl"
         style={blob("rgba(20,20,20,0.10)", "rgba(20,20,20,0.00)", 0.16)}
-        animate={reduce ? {} : { x: [0, -18, 10, 0], y: [0, 16, -10, 0], scale: [1, 1.03, 1.0, 1] }}
-        transition={reduce ? {} : { duration: 22, repeat: Infinity, ease: "easeInOut" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                x: [0, -18, 10, 0],
+                y: [0, 16, -10, 0],
+                scale: [1, 1.03, 1.0, 1],
+              }
+        }
+        transition={
+          reduce ? {} : { duration: 22, repeat: Infinity, ease: "easeInOut" }
+        }
       />
 
       <motion.div
         className="absolute inset-0"
         style={{
-          backgroundImage: "radial-gradient(rgba(0,0,0,0.35) 1px, transparent 1px)",
+          backgroundImage:
+            "radial-gradient(rgba(0,0,0,0.35) 1px, transparent 1px)",
           backgroundSize: "24px 24px",
-          opacity: 0.10,
-          maskImage: "radial-gradient(900px 520px at 30% 20%, black 0%, transparent 70%)",
-          WebkitMaskImage: "radial-gradient(900px 520px at 30% 20%, black 0%, transparent 70%)",
+          opacity: 0.1,
+          maskImage:
+            "radial-gradient(900px 520px at 30% 20%, black 0%, transparent 70%)",
+          WebkitMaskImage:
+            "radial-gradient(900px 520px at 30% 20%, black 0%, transparent 70%)",
         }}
         animate={reduce ? {} : { backgroundPosition: ["0px 0px", "24px 24px"] }}
-        transition={reduce ? {} : { duration: 10, repeat: Infinity, ease: "linear" }}
+        transition={
+          reduce ? {} : { duration: 10, repeat: Infinity, ease: "linear" }
+        }
       />
 
       <div

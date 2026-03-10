@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import HotImg from "../../assets/hot.png";
 import GuidanceImg from "../../assets/Guidance.png";
 
-function useInView(options = { threshold: 0.18, root: null, rootMargin: "0px" }) {
+function useInView(
+  options = { threshold: 0.18, root: null, rootMargin: "0px" },
+) {
   const ref = useRef(null);
   const [inView, setInView] = useState(false);
 
@@ -28,7 +30,7 @@ function useInView(options = { threshold: 0.18, root: null, rootMargin: "0px" })
           obs.unobserve(el);
         }
       },
-      { threshold, root, rootMargin }
+      { threshold, root, rootMargin },
     );
 
     obs.observe(el);
@@ -46,73 +48,49 @@ function normalizeTel(input) {
 }
 
 /**
- * Behavior:
- * - Phone/tablet => open dialer (tel:)
- * - "PC" (desktop-sized, fine pointer) => copy number (no extra UI)
+ * Dial behavior:
+ * - Mobile/tablet => allow tel:
+ * - Desktop => disable (not clickable)
  */
-function shouldCopyOnPC() {
-  if (typeof window === "undefined") return false;
+function canDialOnThisDevice() {
+  if (typeof window === "undefined") return true;
 
   const nav = window.navigator;
   const ua = String(nav?.userAgent || "").toLowerCase();
 
-  // Mobile heuristics
-  const isMobile =
+  const uaSaysMobile =
     Boolean(nav?.userAgentData?.mobile) ||
     /android|iphone|ipod|ipad|mobile|windows phone/.test(ua);
 
-  if (isMobile) return false;
+  if (uaSaysMobile) return true;
 
-  // Treat coarse pointer / touch devices as "can dial" (keeps phone/tablet behavior)
-  const isCoarse =
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(pointer: coarse)").matches;
+  const mm =
+    typeof window.matchMedia === "function"
+      ? window.matchMedia.bind(window)
+      : null;
+  const coarseNoHover = mm
+    ? mm("(hover: none) and (pointer: coarse)").matches
+    : false;
 
-  const hasTouch = typeof nav?.maxTouchPoints === "number" && nav.maxTouchPoints > 0;
+  const iPadDesktopMode =
+    /macintosh/.test(ua) && (nav?.maxTouchPoints ?? 0) > 1;
 
-  if (isCoarse || hasTouch) return false;
-
-  // Desktop-ish (what the user calls "PC"): big viewport + fine pointer
-  const isFinePointer =
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(hover: hover) and (pointer: fine)").matches;
-
-  const bigScreen = window.innerWidth >= 1440; // favors laptops dialing; big desktops copy
-  return Boolean(isFinePointer && bigScreen);
+  return coarseNoHover || iPadDesktopMode;
 }
 
-async function copyTextToClipboard(text) {
-  const t = String(text || "");
-  if (!t) return;
+function useCanDial() {
+  const [canDial, setCanDial] = useState(() => canDialOnThisDevice());
 
-  try {
-    // Modern async clipboard API
-    if (navigator?.clipboard?.writeText) {
-      await navigator.clipboard.writeText(t);
-      return;
-    }
-  } catch {
-    // fall through to legacy method
-  }
+  useEffect(() => {
+    const update = () => setCanDial(canDialOnThisDevice());
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
-  try {
-    // Legacy fallback (no UI)
-    const ta = document.createElement("textarea");
-    ta.value = t;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    ta.style.top = "0";
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand("copy");
-    document.body.removeChild(ta);
-  } catch {
-    // silently ignore (no UI)
-  }
+  return canDial;
 }
 
-/** --- Minimal doodles --- */
 function DoodleSpark({ className = "" }) {
   return (
     <svg
@@ -180,10 +158,15 @@ function DoodleHeart({ className = "" }) {
   );
 }
 
-/** SVG Icons */
 function PhoneIcon({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className={className} fill="none">
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+      fill="none"
+    >
       <path
         d="M6.6 10.8c1.7 3.2 3.4 4.9 6.6 6.6l2.2-2.2c.3-.3.8-.4 1.2-.2 1 .4 2.2.7 3.4.8.5.1.9.5.9 1v3.5c0 .6-.5 1-1.1 1C11 21.3 2.7 13 2.7 2.2c0-.6.4-1.1 1-1.1h3.5c.5 0 .9.4 1 1 .2 1.2.4 2.3.8 3.4.2.4.1.9-.2 1.2L6.6 10.8Z"
         stroke="#141414"
@@ -196,22 +179,44 @@ function PhoneIcon({ className = "" }) {
 
 function ShieldIcon({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className={className} fill="none">
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+      fill="none"
+    >
       <path
         d="M12 2l8 4v7c0 5-3.6 8.7-8 9-4.4-.3-8-4-8-9V6l8-4Z"
         stroke="#141414"
         strokeWidth="2"
         strokeLinejoin="round"
       />
-      <path d="M12 7v6" stroke="#141414" strokeWidth="2" strokeLinecap="round" />
-      <path d="M12 17h.01" stroke="#141414" strokeWidth="3" strokeLinecap="round" />
+      <path
+        d="M12 7v6"
+        stroke="#141414"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 17h.01"
+        stroke="#141414"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function SchoolIcon({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className={className} fill="none">
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+      fill="none"
+    >
       <path
         d="M12 3l10 5-10 5L2 8l10-5Z"
         stroke="#141414"
@@ -224,7 +229,9 @@ function SchoolIcon({ className = "" }) {
         strokeWidth="2"
         strokeLinejoin="round"
       />
-      <path d="M22 8v6" stroke="#141414"
+      <path
+        d="M22 8v6"
+        stroke="#141414"
         strokeWidth="2"
         strokeLinecap="round"
       />
@@ -232,7 +239,6 @@ function SchoolIcon({ className = "" }) {
   );
 }
 
-/** Card shell */
 function Card({ children, className = "" }) {
   return (
     <div
@@ -263,14 +269,64 @@ function HeroGlow() {
   );
 }
 
-function EmergencyCard({ item, delay = 0, variant = "default" }) {
+function PrimaryCallCTA({ canDial, href, ariaLabel, className, label }) {
+  const base = [
+    "inline-flex items-center justify-center gap-2",
+    "rounded-full border border-black/20 bg-[#B9FF66]",
+    "px-4 py-3 min-h-[48px]",
+    "text-[14px] sm:text-[15px] font-extrabold text-[#141414]",
+    "whitespace-normal break-words text-center leading-snug",
+    "focus:outline-none focus-visible:ring-2 focus-visible:ring-black/25 focus-visible:ring-offset-2",
+  ];
+
+  const enabledFx = [
+    "hover:-translate-y-[1px] hover:shadow-[0_14px_20px_rgba(0,0,0,0.10)] hover:brightness-[0.99]",
+    "active:scale-[0.99] transition",
+  ];
+
+  const disabledFx = ["opacity-60 cursor-not-allowed"];
+
+  if (!canDial) {
+    return (
+      <button
+        type="button"
+        disabled
+        aria-label={`${ariaLabel} (mobile only)`}
+        title="Available on mobile devices only"
+        className={[...base, ...disabledFx, className].join(" ")}
+        style={{ fontFamily: "Nunito, system-ui, sans-serif" }}
+      >
+        <PhoneIcon className="w-5 h-5 shrink-0" />
+        <span>{label}</span>
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href={href}
+      aria-label={ariaLabel}
+      className={[...base, ...enabledFx, className].join(" ")}
+      style={{ fontFamily: "Nunito, system-ui, sans-serif" }}
+    >
+      <PhoneIcon className="w-5 h-5 shrink-0" />
+      <span>{label}</span>
+    </a>
+  );
+}
+
+function EmergencyCard({
+  item,
+  delay = 0,
+  variant = "default",
+  canDial = true,
+}) {
   const [ref, inView] = useInView({ threshold: 0.25 });
 
   const safeTel = normalizeTel(item.tel || "");
-  const href = item.mode === "call" ? `tel:${safeTel}` : item.href || "#";
   const isFeatured = variant === "featured";
 
-  const heroOverflow = item?.hero?.overflow || "inside"; // "inside" | "outside"
+  const heroOverflow = item?.hero?.overflow || "inside";
   const heroGlow = Boolean(item?.hero?.glow);
 
   const cardOverflowClass = isFeatured
@@ -279,16 +335,9 @@ function EmergencyCard({ item, delay = 0, variant = "default" }) {
       : "overflow-hidden"
     : "overflow-hidden";
 
-  const onPrimaryClick = async (e) => {
-    if (item.mode !== "call") return;
-
-    // On PC -> copy number only (no UI)
-    if (shouldCopyOnPC()) {
-      e.preventDefault();
-      await copyTextToClipboard(safeTel);
-    }
-    // else: allow default tel: behavior
-  };
+  const isCall = item.mode === "call";
+  const callAllowed = isCall ? canDial : true;
+  const href = isCall ? `tel:${safeTel}` : item.href || "#";
 
   return (
     <div
@@ -309,7 +358,6 @@ function EmergencyCard({ item, delay = 0, variant = "default" }) {
         {isFeatured ? (
           <div className="p-4 sm:p-6 md:p-8">
             <div className="grid gap-10 md:grid-cols-[1fr_360px] md:items-stretch md:gap-10 md:min-h-[340px]">
-              {/* Left: content + CTA pushed down */}
               <div className="min-w-0 flex flex-col h-full">
                 <div className="min-w-0">
                   <div className="flex items-start gap-3 sm:gap-4">
@@ -338,7 +386,9 @@ function EmergencyCard({ item, delay = 0, variant = "default" }) {
                         <div className="mt-2">
                           <span
                             className="inline-flex items-center rounded-full border border-black/10 bg-[#B9FF66]/25 px-3 py-1 text-[12px] sm:text-[13px] font-extrabold text-[#141414]"
-                            style={{ fontFamily: "Nunito, system-ui, sans-serif" }}
+                            style={{
+                              fontFamily: "Nunito, system-ui, sans-serif",
+                            }}
                           >
                             {item.subtext}
                           </span>
@@ -356,26 +406,15 @@ function EmergencyCard({ item, delay = 0, variant = "default" }) {
                 </div>
 
                 <div className="mt-6 md:mt-auto pt-2 md:pt-6">
-                  <a
+                  <PrimaryCallCTA
+                    canDial={callAllowed}
                     href={href}
-                    onClick={onPrimaryClick}
-                    aria-label={item.mode === "call" ? `Call ${item.title}` : item.primaryLabel}
-                    className={[
-                      "w-full sm:w-auto sm:min-w-[240px]",
-                      "inline-flex items-center justify-center gap-2",
-                      "rounded-full border border-black/20 bg-[#B9FF66]",
-                      "px-4 py-3 min-h-[48px]",
-                      "text-[14px] sm:text-[15px] font-extrabold text-[#141414]",
-                      "whitespace-normal break-words text-center leading-snug",
-                      "hover:-translate-y-[1px] hover:shadow-[0_14px_20px_rgba(0,0,0,0.10)] hover:brightness-[0.99]",
-                      "active:scale-[0.99] transition",
-                      "focus:outline-none focus-visible:ring-2 focus-visible:ring-black/25 focus-visible:ring-offset-2",
-                    ].join(" ")}
-                    style={{ fontFamily: "Nunito, system-ui, sans-serif" }}
-                  >
-                    <PhoneIcon className="w-5 h-5 shrink-0" />
-                    <span>{item.primaryLabel}</span>
-                  </a>
+                    ariaLabel={
+                      isCall ? `Call ${item.title}` : item.primaryLabel
+                    }
+                    label={item.primaryLabel}
+                    className="w-full sm:w-auto sm:min-w-[240px]"
+                  />
 
                   <div className="flex justify-start">
                     <DoodleWave className="mt-4 w-[190px] opacity-[0.10]" />
@@ -383,7 +422,6 @@ function EmergencyCard({ item, delay = 0, variant = "default" }) {
                 </div>
               </div>
 
-              {/* Right: hero image (right + top overflow) */}
               <div className="relative flex h-full items-center justify-center md:justify-end">
                 {item.assetImg ? (
                   <div
@@ -416,7 +454,6 @@ function EmergencyCard({ item, delay = 0, variant = "default" }) {
             </div>
           </div>
         ) : (
-          // Default cards unchanged
           <div className="h-full grid grid-rows-[auto_1fr_auto] p-4 sm:p-6 min-h-[250px] sm:min-h-[270px]">
             <div className="flex items-start gap-3 sm:gap-4">
               <div className="shrink-0">
@@ -461,26 +498,13 @@ function EmergencyCard({ item, delay = 0, variant = "default" }) {
             </p>
 
             <div className="mt-4">
-              <a
+              <PrimaryCallCTA
+                canDial={callAllowed}
                 href={href}
-                onClick={onPrimaryClick}
-                aria-label={item.mode === "call" ? `Call ${item.title}` : item.primaryLabel}
-                className={[
-                  "w-full",
-                  "inline-flex items-center justify-center gap-2",
-                  "rounded-full border border-black/20 bg-[#B9FF66]",
-                  "px-4 py-3 min-h-[48px]",
-                  "text-[13px] sm:text-[14px] font-extrabold text-[#141414]",
-                  "whitespace-normal break-words text-center leading-snug",
-                  "hover:-translate-y-[1px] hover:shadow-[0_14px_20px_rgba(0,0,0,0.10)] hover:brightness-[0.99]",
-                  "active:scale-[0.99] transition",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-black/25 focus-visible:ring-offset-2",
-                ].join(" ")}
-                style={{ fontFamily: "Nunito, system-ui, sans-serif" }}
-              >
-                <PhoneIcon className="w-5 h-5 shrink-0" />
-                <span>{item.primaryLabel}</span>
-              </a>
+                ariaLabel={isCall ? `Call ${item.title}` : item.primaryLabel}
+                label={item.primaryLabel}
+                className="w-full text-[13px] sm:text-[14px]"
+              />
 
               <DoodleWave className="mt-4 w-[190px] opacity-[0.10]" />
             </div>
@@ -493,13 +517,7 @@ function EmergencyCard({ item, delay = 0, variant = "default" }) {
 
 export default function Emergency() {
   const [heroRef, heroInView] = useInView({ threshold: 0.2 });
-
-  const onHeroCallClick = async (e) => {
-    if (shouldCopyOnPC()) {
-      e.preventDefault();
-      await copyTextToClipboard("911");
-    }
-  };
+  const canDial = useCanDial();
 
   const sections = useMemo(
     () => [
@@ -517,7 +535,7 @@ export default function Emergency() {
             tel: "85797295",
             primaryLabel: "Call Guidance",
             assetImg: GuidanceImg,
-            hero: { overflow: "outside", glow: true }, // ✅ outside => right+top pop
+            hero: { overflow: "outside", glow: true },
           },
         ],
       },
@@ -546,9 +564,7 @@ export default function Emergency() {
           {
             tag: "Mental Health",
             title: "NCMH Crisis Hotline",
-            subtext: "24/7 support",
-            desc:
-              "Crisis support and referral. If you can’t connect: 0919-057-1553 (Smart/TNT) • 0917-899-8727 (Globe/TM).",
+            desc: "Crisis support and referral. If you can’t connect: 0919-057-1553 (Smart/TNT) • 0917-899-8727 (Globe/TM).",
             icon: <DoodleHeart className="w-6 h-6" />,
             mode: "call",
             tel: "1553",
@@ -587,7 +603,7 @@ export default function Emergency() {
         ],
       },
     ],
-    []
+    [],
   );
 
   return (
@@ -607,7 +623,6 @@ export default function Emergency() {
       </div>
 
       <div className="relative mx-auto w-full max-w-[1200px] px-3 sm:px-6 lg:px-10 py-8 sm:py-12">
-        {/* HERO */}
         <div
           className="relative rounded-[22px] border border-black/15 bg-white/75 backdrop-blur-[2px] overflow-hidden"
           ref={heroRef}
@@ -641,32 +656,22 @@ export default function Emergency() {
               className="mt-3 sm:mt-4 text-[13px] sm:text-[16px] text-black/65 leading-relaxed max-w-[72ch]"
               style={{ fontFamily: "Nunito, system-ui, sans-serif" }}
             >
-              If it’s an emergency, call 911. If you’re safe, reach out to campus support.
+              If it’s an emergency, call 911. If you’re safe, reach out to
+              campus support.
             </p>
 
             <div className="mt-5 sm:mt-6">
-              <a
+              <PrimaryCallCTA
+                canDial={canDial}
                 href="tel:911"
-                onClick={onHeroCallClick}
-                className={[
-                  "w-full sm:w-auto",
-                  "inline-flex items-center justify-center gap-2 rounded-full border border-black/15 bg-[#B9FF66]",
-                  "px-5 py-3 min-h-[48px] text-[14px] font-extrabold text-[#141414]",
-                  "whitespace-normal break-words text-center",
-                  "hover:-translate-y-[1px] hover:shadow-[0_14px_20px_rgba(0,0,0,0.10)] hover:brightness-[0.99]",
-                  "active:scale-[0.99] transition",
-                  "focus:outline-none focus-visible:ring-2 focus-visible:ring-black/25 focus-visible:ring-offset-2",
-                ].join(" ")}
-                style={{ fontFamily: "Nunito, system-ui, sans-serif" }}
-              >
-                <PhoneIcon className="w-5 h-5 shrink-0" />
-                Call 911
-              </a>
+                ariaLabel="Call 911"
+                label="Call 911"
+                className="w-full sm:w-auto px-5"
+              />
             </div>
           </div>
         </div>
 
-        {/* SECTIONS */}
         <div className="mt-8 sm:mt-10 space-y-10">
           {sections.map((sec, sIdx) => {
             const isFeaturedSection = sec.items.length === 1;
@@ -697,7 +702,13 @@ export default function Emergency() {
                 {isFeaturedSection ? (
                   <div className="mt-4 sm:mt-5">
                     {sec.items.map((item, i) => (
-                      <EmergencyCard key={`${sIdx}-${i}`} item={item} delay={i * 110} variant="featured" />
+                      <EmergencyCard
+                        key={`${sIdx}-${i}`}
+                        item={item}
+                        delay={i * 110}
+                        variant="featured"
+                        canDial={canDial}
+                      />
                     ))}
                   </div>
                 ) : (
@@ -710,7 +721,13 @@ export default function Emergency() {
                     ].join(" ")}
                   >
                     {sec.items.map((item, i) => (
-                      <EmergencyCard key={`${sIdx}-${i}`} item={item} delay={i * 110} variant="default" />
+                      <EmergencyCard
+                        key={`${sIdx}-${i}`}
+                        item={item}
+                        delay={i * 110}
+                        variant="default"
+                        canDial={canDial}
+                      />
                     ))}
                   </div>
                 )}

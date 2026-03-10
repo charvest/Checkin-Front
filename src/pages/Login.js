@@ -935,8 +935,7 @@ function EyeIcon({ open }) {
 function formatFieldError(errorText) {
   if (!errorText) return "";
   const norm = String(errorText).trim();
-  if (/^must be filled out/i.test(norm) && !norm.endsWith("*"))
-    return `${norm}*`;
+  if (/^must be filled out/i.test(norm) && !norm.endsWith("*")) return `${norm}*`;
   return norm;
 }
 
@@ -960,9 +959,7 @@ function FieldInput({
   return (
     <div className="w-full">
       <div className="mb-1 flex items-end justify-between gap-3">
-        <span className="block text-[13px] font-extrabold text-black/90">
-          {label}
-        </span>
+        <span className="block text-[13px] font-extrabold text-black/90">{label}</span>
       </div>
 
       <div className="relative">
@@ -980,11 +977,7 @@ function FieldInput({
             text-[14px] sm:text-[15px]
             focus:outline-none focus:ring-2 focus:ring-black/20
             placeholder:text-black/40
-            ${
-              showInlineRequired
-                ? "placeholder:text-red-600 placeholder:font-extrabold"
-                : ""
-            }
+            ${showInlineRequired ? "placeholder:text-red-600 placeholder:font-extrabold" : ""}
             ${disabled ? "opacity-60 cursor-not-allowed" : ""}
             ${errorText ? "border-red-600" : "border-black"}
           `}
@@ -994,9 +987,7 @@ function FieldInput({
         />
 
         {rightSlot ? (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2">
-            {rightSlot}
-          </div>
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightSlot}</div>
         ) : null}
       </div>
 
@@ -1044,9 +1035,7 @@ function OrDivider() {
   return (
     <div className="flex items-center gap-3 py-1">
       <div className="h-px bg-black/15 flex-1" />
-      <span className="text-[11px] font-extrabold tracking-[0.22em] text-black/55">
-        OR
-      </span>
+      <span className="text-[11px] font-extrabold tracking-[0.22em] text-black/55">OR</span>
       <div className="h-px bg-black/15 flex-1" />
     </div>
   );
@@ -1077,9 +1066,7 @@ function TermsModal({ open, onClose, onAgree, agreed, setAgreed, loading }) {
           <h2 className="text-[18px] sm:text-[20px] font-extrabold tracking-[0.12em]">
             TERMS & CONDITIONS
           </h2>
-          <p className="text-[13px] text-black/60 mt-2">
-            Please review and accept to continue.
-          </p>
+          <p className="text-[13px] text-black/60 mt-2">Please review and accept to continue.</p>
         </div>
 
         <div
@@ -1089,16 +1076,27 @@ function TermsModal({ open, onClose, onAgree, agreed, setAgreed, loading }) {
           <p className="font-bold text-black/80 mb-2">Summary</p>
           <ul className="list-disc list-inside space-y-2">
             <li>CheckIn supports student well-being using journaling and PHQ-9 self-assessment.</li>
-            <li>CheckIn is <span className="font-semibold">not</span> a diagnostic tool and does not replace professional care.</li>
+            <li>
+              CheckIn is <span className="font-semibold">not</span> a diagnostic tool and does not
+              replace professional care.
+            </li>
             <li>Use the platform respectfully. Do not attempt unauthorized access or misuse.</li>
             <li>If you are in immediate danger, contact emergency services or your local hotline.</li>
           </ul>
 
           <div className="mt-5">
             <p className="font-bold text-black/80 mb-2">Full Terms</p>
-            <p className="mb-3">By using CheckIn, you agree to use the platform only for lawful and appropriate purposes.</p>
-            <p className="mb-3">CheckIn may store and process information you provide to deliver features and improve performance.</p>
-            <p className="mb-3">CheckIn is provided “as is.” We cannot guarantee uninterrupted availability.</p>
+            <p className="mb-3">
+              By using CheckIn, you agree to use the platform only for lawful and appropriate
+              purposes.
+            </p>
+            <p className="mb-3">
+              CheckIn may store and process information you provide to deliver features and improve
+              performance.
+            </p>
+            <p className="mb-3">
+              CheckIn is provided “as is.” We cannot guarantee uninterrupted availability.
+            </p>
             <p>We may update these terms when necessary. Continued use constitutes acceptance of updated terms.</p>
           </div>
         </div>
@@ -1376,6 +1374,12 @@ export default function Login() {
       justify-content: center;
       align-items: center;
     }
+
+    /* Edge/IE inject a native password "reveal" icon; hide it to avoid double-eye UI */
+    input[type="password"]::-ms-reveal,
+    input[type="password"]::-ms-clear {
+      display: none;
+    }
   `;
 
   return (
@@ -1404,10 +1408,7 @@ export default function Login() {
       <div className="mx-auto w-full max-w-[1500px] px-[clamp(16px,3.4vw,90px)] pt-6 sm:pt-10 lg:pt-[clamp(132px,4vh,72px)] pb-[clamp(22px,5vh,56px)]">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(88px,3.2vw,64px)] lg:gap-x-[clamp(56px,7vw,160px)] items-start">
           {/* LEFT: LOGIN */}
-          <section
-            className="w-full mx-auto lg:mx-0 lg:justify-self-start"
-            style={{ maxWidth: "600px" }}
-          >
+          <section className="w-full mx-auto lg:mx-0 lg:justify-self-start" style={{ maxWidth: "600px" }}>
             <div className="relative  lg:gap-x-[clamp(56px,7vw,160px)] px-1 sm:px-0">
               <h1 className="text-[28px] sm:text-[36px] font-black tracking-[.22em] sm:tracking-[.26em] leading-tight text-black drop-shadow-sm">
                 LOGIN
@@ -1429,10 +1430,7 @@ export default function Login() {
                 </div>
               ) : null}
 
-              <form
-                className="mt-6 flex flex-col gap-4"
-                onSubmit={handleEmailLogin}
-              >
+              <form className="mt-6 flex flex-col gap-4" onSubmit={handleEmailLogin}>
                 <FieldInput
                   label="Email or Username"
                   value={form.emailOrUsername}
@@ -1474,11 +1472,7 @@ export default function Login() {
                 </div>
 
                 <div className="pt-1 flex flex-col gap-3">
-                  <PrimaryButton
-                    className="w-full"
-                    disabled={loading}
-                    type="submit"
-                  >
+                  <PrimaryButton className="w-full" disabled={loading} type="submit">
                     {loading ? (
                       <span className="inline-flex items-center gap-2">
                         <Spinner />
@@ -1520,10 +1514,7 @@ export default function Login() {
 
           {/* RIGHT: DOME (match signup) */}
           <section className="hidden lg:flex items-start justify-center self-stretch lg:pl-8 xl:pl-12">
-            <div
-              className="w-full h-full flex items-start justify-center"
-              style={{ minHeight: "620px" }}
-            >
+            <div className="w-full h-full flex items-start justify-center" style={{ minHeight: "620px" }}>
               <div
                 className="w-full"
                 style={{

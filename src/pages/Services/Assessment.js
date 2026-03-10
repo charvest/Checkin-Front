@@ -1,5 +1,12 @@
 // /components/PHQ9.jsx
-import { useMemo, useRef, useState, useEffect, useCallback, useId } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+  useCallback,
+  useId,
+} from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { getToken, getUser } from "../../utils/auth";
 
@@ -14,7 +21,172 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 /** API (Render backend) */
 const API_BASE = process.env.REACT_APP_API_URL || "";
 const API_ROOT = API_BASE ? `${API_BASE}/api` : "/api";
+const PHQ9_TUTORIAL_KEY = "checkin:tutorial:phq9";
 
+function readTutorialSeen(key) {
+  try {
+    return window.localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markTutorialSeen(key) {
+  try {
+    window.localStorage.setItem(key, "1");
+  } catch {
+    // ignore
+  }
+}
+
+function getTutorialRect(node) {
+  if (!node || typeof node.getBoundingClientRect !== "function") return null;
+  const rect = node.getBoundingClientRect();
+  return {
+    top: Math.max(10, rect.top - 10),
+    left: Math.max(10, rect.left - 10),
+    width: Math.max(96, rect.width + 20),
+    height: Math.max(52, rect.height + 20),
+  };
+}
+
+function ServiceTutorialOverlay({
+  open,
+  steps,
+  stepIndex,
+  onNext,
+  onSkip,
+  ariaLabel = "PHQ-9 tutorial",
+  accentColor = "#B9FF66",
+  accentText = "#141414",
+}) {
+  const step = steps?.[stepIndex] || null;
+  const [rect, setRect] = useState(null);
+
+  useEffect(() => {
+    if (!open || !step?.targetRef?.current) {
+      setRect(null);
+      return undefined;
+    }
+
+    const target = step.targetRef.current;
+    const update = () => setRect(getTutorialRect(target));
+
+    target.scrollIntoView?.({
+      behavior: "smooth",
+      block: "center",
+      inline: "center",
+    });
+    update();
+
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, step]);
+
+  if (!open || !step) return null;
+
+  const isLast = stepIndex === steps.length - 1;
+  const viewportW = typeof window !== "undefined" ? window.innerWidth : 1280;
+  const viewportH = typeof window !== "undefined" ? window.innerHeight : 720;
+  const cardWidth = Math.min(360, viewportW - 32);
+
+  const cardTop = rect
+    ? rect.top + rect.height + 18 + 210 > viewportH
+      ? Math.max(18, rect.top - 198)
+      : rect.top + rect.height + 18
+    : 24;
+
+  const cardLeft = rect
+    ? Math.min(Math.max(16, rect.left), viewportW - cardWidth - 16)
+    : 16;
+
+  return (
+    <div className="fixed inset-0 z-[140]">
+      <button
+        type="button"
+        aria-label="Skip tutorial"
+        onClick={onSkip}
+        className="absolute inset-0 bg-black/45"
+      />
+
+      {rect && (
+        <div
+          className="pointer-events-none fixed rounded-[26px] border border-white/80 transition-all duration-200"
+          style={{
+            top: rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height,
+            boxShadow: "0 0 0 9999px rgba(20,20,20,0.42)",
+          }}
+        />
+      )}
+
+      <div
+        className="fixed rounded-[26px] border border-white/15 bg-[#141414] text-white shadow-[0_24px_80px_rgba(0,0,0,0.35)] p-5 sm:p-6"
+        style={{
+          top: cardTop,
+          left: cardLeft,
+          width: cardWidth,
+          maxWidth: "calc(100vw - 32px)",
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-[12px] font-black uppercase tracking-[0.16em] text-white/55">
+              Step {stepIndex + 1} of {steps.length}
+            </div>
+            <div className="mt-2 text-[18px] font-black leading-tight">
+              {step.title}
+            </div>
+            <p className="mt-2 text-[14px] leading-relaxed text-white/78">
+              {step.description}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onSkip}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/15 bg-white/5 text-lg font-black text-white/80 transition hover:bg-white/10"
+            aria-label="Close tutorial"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={onSkip}
+            className="rounded-full border border-white/15 bg-white/5 px-4 py-2.5 text-[14px] font-extrabold text-white/82 transition hover:bg-white/10"
+          >
+            Skip
+          </button>
+
+          <button
+            type="button"
+            onClick={onNext}
+            className="rounded-full px-5 py-2.5 text-[14px] font-extrabold transition"
+            style={{
+              backgroundColor: accentColor,
+              color: accentText,
+              boxShadow: "0 16px 40px rgba(185,255,102,0.28)",
+            }}
+          >
+            {isLast ? "Done" : "Next"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 function safeGetToken() {
   try {
     const t = typeof getToken === "function" ? getToken() : null;
@@ -23,7 +195,11 @@ function safeGetToken() {
     // ignore
   }
   if (typeof window === "undefined") return null;
-  return window.localStorage.getItem("token") || window.sessionStorage.getItem("token") || null;
+  return (
+    window.localStorage.getItem("token") ||
+    window.sessionStorage.getItem("token") ||
+    null
+  );
 }
 
 function safeGetUserId() {
@@ -118,8 +294,10 @@ const STYLES = {
   headerDots: {
     backgroundImage: "radial-gradient(rgba(0,0,0,0.35) 1px, transparent 1px)",
     backgroundSize: "24px 24px",
-    maskImage: "radial-gradient(800px 260px at 30% 20%, black 0%, transparent 70%)",
-    WebkitMaskImage: "radial-gradient(800px 260px at 30% 20%, black 0%, transparent 70%)",
+    maskImage:
+      "radial-gradient(800px 260px at 30% 20%, black 0%, transparent 70%)",
+    WebkitMaskImage:
+      "radial-gradient(800px 260px at 30% 20%, black 0%, transparent 70%)",
   },
 };
 
@@ -201,10 +379,16 @@ const LS_KEYS_BASE = {
   answersDraft: "phq9_answers_draft",
   termsAccepted: "phq9_terms_accepted",
   lastSubmittedAt: "phq9_last_submitted_at",
+  disclaimerAccepted: "phq9_disclaimer_accepted",
 };
 
 // legacy (older builds) — delete to prevent cross-user leakage on shared devices
-const LEGACY_GLOBAL_KEYS = ["phq9_answers", "phq9_submitted", "phq9_terms_accepted", "phq9_last_submitted_at"];
+const LEGACY_GLOBAL_KEYS = [
+  "phq9_answers",
+  "phq9_submitted",
+  "phq9_terms_accepted",
+  "phq9_last_submitted_at",
+];
 
 /** Questions */
 const QUESTIONS = [
@@ -245,7 +429,8 @@ function clampAnswer(v) {
   return v;
 }
 function normalizeAnswers(raw) {
-  if (!Array.isArray(raw) || raw.length !== ANSWER_COUNT) return Array(ANSWER_COUNT).fill(null);
+  if (!Array.isArray(raw) || raw.length !== ANSWER_COUNT)
+    return Array(ANSWER_COUNT).fill(null);
   return raw.map(clampAnswer);
 }
 function optionLabelForValue(v) {
@@ -266,6 +451,22 @@ function defaultPrivacyText() {
     "We store your responses in this browser session (sessionStorage) by default.",
     "We only use your answers to provide screening feedback and wellness guidance.",
     "You can reset before submitting. After submitting, the weekly lock makes it read-only.",
+  ];
+}
+
+function defaultBeforeAnsweringDisclaimerText() {
+  return [
+    "This check-in can bring up difficult feelings. Pause anytime if you need to.",
+    "The PHQ-9 is only a screening and self-assessment tool. It does not provide a professional medical diagnosis or opinion and should not replace consultation with a licensed healthcare or mental health professional.",
+    "Answer honestly based on the last 2 weeks.",
+    "If you feel unsafe or in immediate danger, contact local emergency services or a crisis line right away.",
+  ];
+}
+function defaultAfterSubmissionDisclaimerText() {
+  return [
+    "The PHQ-9 is only a screening and self-assessment tool. It does not provide a professional medical diagnosis or opinion and should not replace consultation with a licensed healthcare or mental health professional.",
+    "If you feel worse after completing this, consider reaching out to someone you trust or a mental health professional.",
+    "If you feel unsafe or in immediate danger, contact local emergency services or a crisis line right away.",
   ];
 }
 
@@ -291,11 +492,15 @@ function pad2(n) {
   return String(n).padStart(2, "0");
 }
 function toICSLocalDateTime(d) {
-  return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(
-    d.getMinutes()
-  )}${pad2(d.getSeconds())}`;
+  return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(
+    d.getSeconds(),
+  )}`;
 }
-function makeWeeklyCheckInICS({ startAtMs, title = "PHQ-9 Weekly Check-In", durationMinutes = 15 }) {
+function makeWeeklyCheckInICS({
+  startAtMs,
+  title = "PHQ-9 Weekly Check-In",
+  durationMinutes = 15,
+}) {
   const start = new Date(startAtMs);
   const end = new Date(startAtMs + durationMinutes * 60 * 1000);
   const uid = `phq9-${startAtMs}-${Math.random().toString(16).slice(2)}@checkin`;
@@ -395,7 +600,7 @@ function getFocusableElements(container) {
     '[tabindex]:not([tabindex="-1"])',
   ];
   return Array.from(container.querySelectorAll(selectors.join(","))).filter(
-    (el) => el.offsetParent !== null && !el.getAttribute("aria-hidden")
+    (el) => el.offsetParent !== null && !el.getAttribute("aria-hidden"),
   );
 }
 function useFocusTrap({ open, onClose }) {
@@ -432,7 +637,10 @@ function useFocusTrap({ open, onClose }) {
       const last = items[items.length - 1];
 
       if (e.shiftKey) {
-        if (document.activeElement === first || document.activeElement === containerRef.current) {
+        if (
+          document.activeElement === first ||
+          document.activeElement === containerRef.current
+        ) {
           e.preventDefault();
           last.focus();
         }
@@ -460,25 +668,66 @@ function useFocusTrap({ open, onClose }) {
 /** Icons */
 function IconInfo({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10Z" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M12 10.5v6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M12 7.2h.01" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+      <path
+        d="M12 10.5v6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 7.2h.01"
+        stroke="currentColor"
+        strokeWidth="2.6"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 function IconCheck({ className = "" }) {
   return (
-    <svg viewBox="0 0 24 24" className={className} fill="none" aria-hidden="true">
-      <path d="M20 6 9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M20 6 9 17l-5-5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 function IconChevron({ dir = "right", className = "" }) {
   const rotate = dir === "left" ? "rotate-180" : "";
   return (
-    <svg viewBox="0 0 24 24" className={`${className} ${rotate}`} fill="none" aria-hidden="true">
-      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      viewBox="0 0 24 24"
+      className={`${className} ${rotate}`}
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M9 6l6 6-6 6"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -497,7 +746,10 @@ function GlassCard({ title, right, children, className = "" }) {
     >
       {(title || right) && (
         <div className="px-5 py-4 bg-black/[0.02] flex items-center justify-between gap-3">
-          <div className={`font-extrabold text-[#141414] flex items-center gap-2 ${TXT.sm}`} style={{ fontFamily: "Lora, serif" }}>
+          <div
+            className={`font-extrabold text-[#141414] flex items-center gap-2 ${TXT.sm}`}
+            style={{ fontFamily: "Lora, serif" }}
+          >
             {title}
           </div>
           {right}
@@ -521,45 +773,100 @@ function BackgroundFX() {
       <motion.div
         className="absolute -top-36 -left-36 h-[560px] w-[560px] rounded-full blur-3xl"
         style={blob("rgba(185,255,102,0.95)", "rgba(185,255,102,0.00)", 0.42)}
-        animate={reduce ? {} : { x: [0, 44, -24, 0], y: [0, 22, 56, 0], scale: [1, 1.08, 0.98, 1] }}
-        transition={reduce ? {} : { duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                x: [0, 44, -24, 0],
+                y: [0, 22, 56, 0],
+                scale: [1, 1.08, 0.98, 1],
+              }
+        }
+        transition={
+          reduce ? {} : { duration: 12, repeat: Infinity, ease: "easeInOut" }
+        }
       />
       <motion.div
         className="absolute -top-40 -right-44 h-[680px] w-[680px] rounded-full blur-3xl"
         style={blob("rgba(218,252,182,0.95)", "rgba(218,252,182,0.00)", 0.34)}
-        animate={reduce ? {} : { x: [0, -36, 18, 0], y: [0, 26, -14, 0], scale: [1, 1.06, 1.0, 1] }}
-        transition={reduce ? {} : { duration: 16, repeat: Infinity, ease: "easeInOut" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                x: [0, -36, 18, 0],
+                y: [0, 26, -14, 0],
+                scale: [1, 1.06, 1.0, 1],
+              }
+        }
+        transition={
+          reduce ? {} : { duration: 16, repeat: Infinity, ease: "easeInOut" }
+        }
       />
       <motion.div
         className="absolute top-[18%] left-[18%] h-[720px] w-[720px] rounded-full blur-3xl"
         style={blob("rgba(211,243,176,0.85)", "rgba(211,243,176,0.00)", 0.26)}
-        animate={reduce ? {} : { x: [0, 24, -18, 0], y: [0, -10, 20, 0], scale: [1, 1.04, 0.99, 1] }}
-        transition={reduce ? {} : { duration: 18, repeat: Infinity, ease: "easeInOut" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                x: [0, 24, -18, 0],
+                y: [0, -10, 20, 0],
+                scale: [1, 1.04, 0.99, 1],
+              }
+        }
+        transition={
+          reduce ? {} : { duration: 18, repeat: Infinity, ease: "easeInOut" }
+        }
       />
       <motion.div
         className="absolute -bottom-44 -left-40 h-[640px] w-[640px] rounded-full blur-3xl"
         style={blob("rgba(224,252,193,0.85)", "rgba(224,252,193,0.00)", 0.22)}
-        animate={reduce ? {} : { x: [0, 22, -10, 0], y: [0, -18, 12, 0], scale: [1, 1.05, 1.0, 1] }}
-        transition={reduce ? {} : { duration: 20, repeat: Infinity, ease: "easeInOut" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                x: [0, 22, -10, 0],
+                y: [0, -18, 12, 0],
+                scale: [1, 1.05, 1.0, 1],
+              }
+        }
+        transition={
+          reduce ? {} : { duration: 20, repeat: Infinity, ease: "easeInOut" }
+        }
       />
       <motion.div
         className="absolute top-[10%] right-[6%] h-[560px] w-[560px] rounded-full blur-3xl"
         style={blob("rgba(20,20,20,0.10)", "rgba(20,20,20,0.00)", 0.16)}
-        animate={reduce ? {} : { x: [0, -18, 10, 0], y: [0, 16, -10, 0], scale: [1, 1.03, 1.0, 1] }}
-        transition={reduce ? {} : { duration: 22, repeat: Infinity, ease: "easeInOut" }}
+        animate={
+          reduce
+            ? {}
+            : {
+                x: [0, -18, 10, 0],
+                y: [0, 16, -10, 0],
+                scale: [1, 1.03, 1.0, 1],
+              }
+        }
+        transition={
+          reduce ? {} : { duration: 22, repeat: Infinity, ease: "easeInOut" }
+        }
       />
 
       <motion.div
         className="absolute inset-0"
         style={{
-          backgroundImage: "radial-gradient(rgba(0,0,0,0.35) 1px, transparent 1px)",
+          backgroundImage:
+            "radial-gradient(rgba(0,0,0,0.35) 1px, transparent 1px)",
           backgroundSize: "24px 24px",
-          opacity: 0.10,
-          maskImage: "radial-gradient(900px 520px at 30% 20%, black 0%, transparent 70%)",
-          WebkitMaskImage: "radial-gradient(900px 520px at 30% 20%, black 0%, transparent 70%)",
+          opacity: 0.1,
+          maskImage:
+            "radial-gradient(900px 520px at 30% 20%, black 0%, transparent 70%)",
+          WebkitMaskImage:
+            "radial-gradient(900px 520px at 30% 20%, black 0%, transparent 70%)",
         }}
         animate={reduce ? {} : { backgroundPosition: ["0px 0px", "24px 24px"] }}
-        transition={reduce ? {} : { duration: 10, repeat: Infinity, ease: "linear" }}
+        transition={
+          reduce ? {} : { duration: 10, repeat: Infinity, ease: "linear" }
+        }
       />
 
       <div
@@ -577,7 +884,14 @@ function BackgroundFX() {
   );
 }
 
-function ModalShell({ open, titleId, descId, onClose, closeOnBackdrop = true, children }) {
+function ModalShell({
+  open,
+  titleId,
+  descId,
+  onClose,
+  closeOnBackdrop = true,
+  children,
+}) {
   const trapRef = useFocusTrap({ open, onClose });
 
   return (
@@ -593,7 +907,11 @@ function ModalShell({ open, titleId, descId, onClose, closeOnBackdrop = true, ch
           aria-labelledby={titleId}
           aria-describedby={descId}
         >
-          <div className="absolute inset-0 bg-black/50" onClick={closeOnBackdrop ? onClose : undefined} aria-hidden />
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={closeOnBackdrop ? onClose : undefined}
+            aria-hidden
+          />
           <motion.div
             ref={trapRef}
             tabIndex={-1}
@@ -618,28 +936,53 @@ function InfoModal({ open, onClose, termsAccepted, onAccept }) {
   const mandatory = !termsAccepted;
 
   return (
-    <ModalShell open={open} onClose={mandatory ? undefined : onClose} closeOnBackdrop={!mandatory} titleId="info-title" descId="info-desc">
-      <div className="flex flex-col" style={{ maxHeight: "calc(100vh - 32px)" }}>
+    <ModalShell
+      open={open}
+      onClose={mandatory ? undefined : onClose}
+      closeOnBackdrop={!mandatory}
+      titleId="info-title"
+      descId="info-desc"
+    >
+      <div
+        className="flex flex-col"
+        style={{ maxHeight: "calc(100vh - 32px)" }}
+      >
         <div
           className="p-5 overflow-y-auto"
-          style={{ background: `radial-gradient(780px 240px at 15% 0%, rgba(185,255,102,0.92) 0%, rgba(185,255,102,0.22) 35%, transparent 68%)` }}
+          style={{
+            background: `radial-gradient(780px 240px at 15% 0%, rgba(185,255,102,0.92) 0%, rgba(185,255,102,0.22) 35%, transparent 68%)`,
+          }}
         >
           <div className="flex items-start gap-3">
-            <div className="h-10 w-10 rounded-2xl flex items-center justify-center" style={{ backgroundColor: CHECKIN_GREEN, color: CHECKIN_DARK }}>
+            <div
+              className="h-10 w-10 rounded-2xl flex items-center justify-center"
+              style={{ backgroundColor: CHECKIN_GREEN, color: CHECKIN_DARK }}
+            >
               <IconInfo className="h-6 w-6" />
             </div>
 
             <div className="flex-1">
-              <div id="info-title" className="font-extrabold text-[#141414] text-[18px] sm:text-[20px]" style={{ fontFamily: "Lora, serif" }}>
+              <div
+                id="info-title"
+                className="font-extrabold text-[#141414] text-[18px] sm:text-[20px]"
+                style={{ fontFamily: "Lora, serif" }}
+              >
                 Terms &amp; Privacy
               </div>
               <div id="info-desc" className={`${TXT.xs} text-black/60 mt-1`}>
-                {mandatory ? "Please accept to begin." : "View terms and privacy info anytime."}
+                {mandatory
+                  ? "Please accept to begin."
+                  : "View terms and privacy info anytime."}
               </div>
             </div>
 
             {!mandatory && (
-              <button onClick={onClose} className="text-black/60 hover:text-black font-bold" aria-label="Close" type="button">
+              <button
+                onClick={onClose}
+                className="text-black/60 hover:text-black font-bold"
+                aria-label="Close"
+                type="button"
+              >
                 ✕
               </button>
             )}
@@ -647,8 +990,12 @@ function InfoModal({ open, onClose, termsAccepted, onAccept }) {
 
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="rounded-2xl border border-black/10 bg-white p-4">
-              <div className={`font-extrabold text-[#141414] ${TXT.sm}`}>Terms</div>
-              <ul className={`mt-2 text-black/70 leading-relaxed list-disc pl-5 space-y-2 ${TXT.xs}`}>
+              <div className={`font-extrabold text-[#141414] ${TXT.sm}`}>
+                Terms
+              </div>
+              <ul
+                className={`mt-2 text-black/70 leading-relaxed list-disc pl-5 space-y-2 ${TXT.xs}`}
+              >
                 {terms.map((t, i) => (
                   <li key={i}>{t}</li>
                 ))}
@@ -656,8 +1003,12 @@ function InfoModal({ open, onClose, termsAccepted, onAccept }) {
             </div>
 
             <div className="rounded-2xl border border-black/10 bg-white p-4">
-              <div className={`font-extrabold text-[#141414] ${TXT.sm}`}>Privacy</div>
-              <ul className={`mt-2 text-black/70 leading-relaxed list-disc pl-5 space-y-2 ${TXT.xs}`}>
+              <div className={`font-extrabold text-[#141414] ${TXT.sm}`}>
+                Privacy
+              </div>
+              <ul
+                className={`mt-2 text-black/70 leading-relaxed list-disc pl-5 space-y-2 ${TXT.xs}`}
+              >
                 {privacy.map((t, i) => (
                   <li key={i}>{t}</li>
                 ))}
@@ -668,11 +1019,21 @@ function InfoModal({ open, onClose, termsAccepted, onAccept }) {
 
         <div className="p-4 border-t border-black/10 bg-white">
           {mandatory ? (
-            <button onClick={onAccept} className={`w-full rounded-full py-3 font-extrabold ${TXT.sm}`} style={{ backgroundColor: CHECKIN_DARK, color: "white" }} type="button">
+            <button
+              onClick={onAccept}
+              className={`w-full rounded-full py-3 font-extrabold ${TXT.sm}`}
+              style={{ backgroundColor: CHECKIN_DARK, color: "white" }}
+              type="button"
+            >
               I Agree &amp; Start
             </button>
           ) : (
-            <button onClick={onClose} className={`w-full rounded-full py-3 font-extrabold ${TXT.sm}`} style={{ backgroundColor: CHECKIN_DARK, color: "white" }} type="button">
+            <button
+              onClick={onClose}
+              className={`w-full rounded-full py-3 font-extrabold ${TXT.sm}`}
+              style={{ backgroundColor: CHECKIN_DARK, color: "white" }}
+              type="button"
+            >
               Close
             </button>
           )}
@@ -685,13 +1046,23 @@ function InfoModal({ open, onClose, termsAccepted, onAccept }) {
 /** Reset confirmation modal */
 function ResetConfirmModal({ open, onClose, onConfirm }) {
   return (
-    <ModalShell open={open} onClose={onClose} titleId="reset-title" descId="reset-desc">
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      titleId="reset-title"
+      descId="reset-desc"
+    >
       <div className="p-5">
-        <div id="reset-title" className="font-extrabold text-[#141414] text-[18px] sm:text-[20px]" style={{ fontFamily: "Lora, serif" }}>
+        <div
+          id="reset-title"
+          className="font-extrabold text-[#141414] text-[18px] sm:text-[20px]"
+          style={{ fontFamily: "Lora, serif" }}
+        >
           Reset assessment?
         </div>
         <p id="reset-desc" className={`mt-2 text-black/60 ${TXT.xs}`}>
-          This clears answers and starts over. Weekly submission lock still applies.
+          This clears answers and starts over. Weekly submission lock still
+          applies.
         </p>
 
         <div className="mt-4 flex gap-2">
@@ -700,7 +1071,10 @@ function ResetConfirmModal({ open, onClose, onConfirm }) {
             whileTap={{ scale: 0.99 }}
             onClick={onClose}
             className={`flex-1 rounded-full py-3 font-extrabold bg-white hover:bg-black/5 transition ${TXT.sm}`}
-            style={{ border: "1px solid rgba(0,0,0,0.15)", color: CHECKIN_DARK }}
+            style={{
+              border: "1px solid rgba(0,0,0,0.15)",
+              color: CHECKIN_DARK,
+            }}
             type="button"
           >
             Cancel
@@ -714,6 +1088,186 @@ function ResetConfirmModal({ open, onClose, onConfirm }) {
             type="button"
           >
             Reset
+          </motion.button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+function DisclaimerViewModal({ open, title, subtitle, lines, onClose }) {
+  const titleId = useId();
+  const descId = useId();
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      closeOnBackdrop
+      titleId={titleId}
+      descId={descId}
+    >
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div
+              id={titleId}
+              className="font-extrabold text-[#141414] text-[18px] sm:text-[20px]"
+              style={{ fontFamily: "Lora, serif" }}
+            >
+              {title}
+            </div>
+            <p id={descId} className={`mt-2 text-black/60 ${TXT.xs}`}>
+              {subtitle}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-black/60 hover:text-black font-bold"
+            aria-label="Close"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-black/10 bg-white p-4">
+          <ul className={`list-disc pl-5 space-y-2 text-black/70 ${TXT.sm}`}>
+            {lines.map((t, idx) => (
+              <li key={idx}>{t}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-4">
+          <SecondaryButton onClick={onClose} disabled={false}>
+            Close
+          </SecondaryButton>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+/** Disclaimer modal with a required countdown */
+function TimedDisclaimerModal({
+  open,
+  title,
+  subtitle,
+  lines,
+  secondsLeft,
+  confirmLabel,
+  onConfirm,
+}) {
+  const titleId = useId();
+  const descId = useId();
+  const locked = secondsLeft > 0;
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={undefined}
+      closeOnBackdrop={false}
+      titleId={titleId}
+      descId={descId}
+    >
+      <div className="p-5">
+        <div
+          id={titleId}
+          className="font-extrabold text-[#141414] text-[18px] sm:text-[20px]"
+          style={{ fontFamily: "Lora, serif" }}
+        >
+          {title}
+        </div>
+        <p id={descId} className={`mt-2 text-black/60 ${TXT.xs}`}>
+          {subtitle}
+        </p>
+
+        <div className="mt-4 rounded-2xl border border-black/10 bg-white p-4">
+          <ul className={`list-disc pl-5 space-y-2 text-black/70 ${TXT.sm}`}>
+            {lines.map((t, idx) => (
+              <li key={idx}>{t}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <div className={`text-black/60 ${TXT.xs}`}>
+            {locked ? (
+              <>
+                Please wait{" "}
+                <span className="font-extrabold text-black">
+                  {secondsLeft}s
+                </span>
+                …
+              </>
+            ) : (
+              <>You can continue.</>
+            )}
+          </div>
+
+          <motion.button
+            whileHover={!locked ? { scale: 1.01 } : undefined}
+            whileTap={!locked ? { scale: 0.99 } : undefined}
+            onClick={onConfirm}
+            disabled={locked}
+            className={`rounded-full px-5 py-3 font-extrabold transition disabled:opacity-50 disabled:cursor-not-allowed ${TXT.sm}`}
+            style={{ backgroundColor: CHECKIN_DARK, color: "white" }}
+            type="button"
+          >
+            {locked ? `${confirmLabel} (${secondsLeft}s)` : confirmLabel}
+          </motion.button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+/** Submit confirmation modal */
+function SubmitConfirmModal({ open, onClose, onConfirm, disabled }) {
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      titleId="submit-title"
+      descId="submit-desc"
+    >
+      <div className="p-5">
+        <div
+          id="submit-title"
+          className="font-extrabold text-[#141414] text-[18px] sm:text-[20px]"
+          style={{ fontFamily: "Lora, serif" }}
+        >
+          Submit PHQ-9?
+        </div>
+        <p id="submit-desc" className={`mt-2 text-black/60 ${TXT.xs}`}>
+          Are you sure you want to submit PHQ-9? After submitting, answers
+          become read-only and you can submit again in 7 days.
+        </p>
+
+        <div className="mt-4 flex gap-2">
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.99 }}
+            onClick={onClose}
+            className={`flex-1 rounded-full py-3 font-extrabold bg-white hover:bg-black/5 transition ${TXT.sm}`}
+            style={{
+              border: "1px solid rgba(0,0,0,0.15)",
+              color: CHECKIN_DARK,
+            }}
+            type="button"
+          >
+            Cancel
+          </motion.button>
+          <motion.button
+            whileHover={!disabled ? { scale: 1.01 } : undefined}
+            whileTap={!disabled ? { scale: 0.99 } : undefined}
+            onClick={onConfirm}
+            disabled={disabled}
+            className={`flex-1 rounded-full py-3 font-extrabold transition disabled:opacity-50 disabled:cursor-not-allowed ${TXT.sm}`}
+            style={{ backgroundColor: CHECKIN_DARK, color: "white" }}
+            type="button"
+          >
+            Submit
           </motion.button>
         </div>
       </div>
@@ -781,9 +1335,17 @@ function SecondaryButton({ onClick, disabled, children }) {
 
 /** Step dots */
 function StepDot({ active, done, index, onClick, disabled }) {
-  const bg = done ? "rgba(185,255,102,0.60)" : active ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.90)";
+  const bg = done
+    ? "rgba(185,255,102,0.60)"
+    : active
+      ? "rgba(0,0,0,0.04)"
+      : "rgba(255,255,255,0.90)";
   const border = active ? "rgba(0,0,0,0.28)" : "rgba(0,0,0,0.14)";
-  const bubble = done ? "rgba(20,20,20,0.90)" : active ? "rgba(185,255,102,0.55)" : "rgba(0,0,0,0.10)";
+  const bubble = done
+    ? "rgba(20,20,20,0.90)"
+    : active
+      ? "rgba(185,255,102,0.55)"
+      : "rgba(0,0,0,0.10)";
 
   return (
     <motion.button
@@ -796,7 +1358,10 @@ function StepDot({ active, done, index, onClick, disabled }) {
       style={{ background: bg, borderColor: border, color: CHECKIN_DARK }}
       title={done ? "Answered" : "Not answered"}
     >
-      <span className="inline-flex items-center justify-center h-7 w-7 rounded-full" style={{ background: bubble, color: done ? "white" : CHECKIN_DARK }}>
+      <span
+        className="inline-flex items-center justify-center h-7 w-7 rounded-full"
+        style={{ background: bubble, color: done ? "white" : CHECKIN_DARK }}
+      >
         <AnimatePresence mode="wait" initial={false}>
           {done ? (
             <motion.span
@@ -810,7 +1375,14 @@ function StepDot({ active, done, index, onClick, disabled }) {
               <IconCheck className="h-4 w-4" />
             </motion.span>
           ) : (
-            <motion.span key="num" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="leading-none">
+            <motion.span
+              key="num"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.12 }}
+              className="leading-none"
+            >
               {index + 1}
             </motion.span>
           )}
@@ -837,13 +1409,19 @@ function OptionCard({ label, hint, active, disabled, onSelect }) {
         background: active
           ? "linear-gradient(180deg, rgba(185,255,102,0.44) 0%, rgba(185,255,102,0.16) 100%)"
           : "rgba(255,255,255,0.92)",
-        boxShadow: active ? "0 14px 40px rgba(0,0,0,0.10)" : "0 10px 26px rgba(0,0,0,0.04)",
+        boxShadow: active
+          ? "0 14px 40px rgba(0,0,0,0.10)"
+          : "0 10px 26px rgba(0,0,0,0.04)",
       }}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-extrabold text-[#141414] text-[15px] sm:text-[16px]">{label}</div>
-          <div className="text-black/55 mt-1 text-[14px] sm:text-[15px]">{hint}</div>
+          <div className="font-extrabold text-[#141414] text-[15px] sm:text-[16px]">
+            {label}
+          </div>
+          <div className="text-black/55 mt-1 text-[14px] sm:text-[15px]">
+            {hint}
+          </div>
         </div>
 
         <div
@@ -877,11 +1455,20 @@ function OptionCard({ label, hint, active, disabled, onSelect }) {
 /** Review modal */
 function ReviewModal({ open, onClose, answers, onEdit, canEdit }) {
   return (
-    <ModalShell open={open} onClose={onClose} titleId="review-title" descId="review-desc">
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      titleId="review-title"
+      descId="review-desc"
+    >
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div id="review-title" className="font-extrabold text-[#141414] text-[18px] sm:text-[20px]" style={{ fontFamily: "Lora, serif" }}>
+            <div
+              id="review-title"
+              className="font-extrabold text-[#141414] text-[18px] sm:text-[20px]"
+              style={{ fontFamily: "Lora, serif" }}
+            >
               Review answers
             </div>
             <div id="review-desc" className={`text-black/60 mt-1 ${TXT.xs}`}>
@@ -908,7 +1495,11 @@ function ReviewModal({ open, onClose, answers, onEdit, canEdit }) {
 
               const Row = ({ children }) =>
                 canEdit ? (
-                  <button type="button" onClick={() => onEdit(idx)} className="w-full text-left p-4 hover:bg-black/5 transition">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(idx)}
+                    className="w-full text-left p-4 hover:bg-black/5 transition"
+                  >
                     {children}
                   </button>
                 ) : (
@@ -919,11 +1510,25 @@ function ReviewModal({ open, onClose, answers, onEdit, canEdit }) {
                 <Row key={idx}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className={`font-extrabold text-black/60 ${TXT.xs}`}>Q{idx + 1}</div>
-                      <div className={`font-extrabold text-[#141414] mt-1 leading-snug ${TXT.sm}`}>{q}</div>
+                      <div className={`font-extrabold text-black/60 ${TXT.xs}`}>
+                        Q{idx + 1}
+                      </div>
+                      <div
+                        className={`font-extrabold text-[#141414] mt-1 leading-snug ${TXT.sm}`}
+                      >
+                        {q}
+                      </div>
                       <div className={`mt-2 ${TXT.xs}`}>
-                        <span className="font-extrabold text-black/60">Answer: </span>
-                        <span className={missing ? "text-red-600 font-extrabold" : "text-black/70"}>
+                        <span className="font-extrabold text-black/60">
+                          Answer:{" "}
+                        </span>
+                        <span
+                          className={
+                            missing
+                              ? "text-red-600 font-extrabold"
+                              : "text-black/70"
+                          }
+                        >
                           {missing ? "Missing" : optionLabelForValue(v)}
                         </span>
                       </div>
@@ -933,7 +1538,9 @@ function ReviewModal({ open, onClose, answers, onEdit, canEdit }) {
                       <span
                         className={`shrink-0 rounded-full px-3 py-1 font-extrabold ${TXT.xs}`}
                         style={{
-                          background: missing ? "rgba(239,68,68,0.12)" : "rgba(185,255,102,0.42)",
+                          background: missing
+                            ? "rgba(239,68,68,0.12)"
+                            : "rgba(185,255,102,0.42)",
                           color: missing ? "rgb(185,28,28)" : CHECKIN_DARK,
                           border: "1px solid rgba(0,0,0,0.10)",
                         }}
@@ -961,6 +1568,15 @@ function ReviewModal({ open, onClose, answers, onEdit, canEdit }) {
 export default function PHQ9() {
   const shouldReduceMotion = useReducedMotion();
   const progressId = useId();
+  const [disclaimerViewOpen, setDisclaimerViewOpen] = useState(false);
+  const headingRef = useRef(null);
+  const termsRef = useRef(null);
+  const questionNavRef = useRef(null);
+  const questionCardRef = useRef(null);
+  const actionsRef = useRef(null);
+
+  const [tutorialOpen, setTutorialOpen] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
 
   const [userId, setUserId] = useState(null);
   const [apiLoading, setApiLoading] = useState(true);
@@ -972,6 +1588,12 @@ export default function PHQ9() {
   const [submitted, setSubmitted] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
+  const [disclaimerPreOpen, setDisclaimerPreOpen] = useState(false);
+  const [disclaimerPostOpen, setDisclaimerPostOpen] = useState(false);
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false);
+  const [preDisclaimerSeconds, setPreDisclaimerSeconds] = useState(10);
+  const [postDisclaimerSeconds, setPostDisclaimerSeconds] = useState(10);
   const [infoOpen, setInfoOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -989,10 +1611,17 @@ export default function PHQ9() {
       answersDraft: makeScopedKey(LS_KEYS_BASE.answersDraft, userId),
       termsAccepted: makeScopedKey(LS_KEYS_BASE.termsAccepted, userId),
       lastSubmittedAt: makeScopedKey(LS_KEYS_BASE.lastSubmittedAt, userId),
+      disclaimerAccepted: makeScopedKey(
+        LS_KEYS_BASE.disclaimerAccepted,
+        userId,
+      ),
     };
   }, [userId]);
 
-  const answeredCount = useMemo(() => answers.filter((a) => a !== null).length, [answers]);
+  const answeredCount = useMemo(
+    () => answers.filter((a) => a !== null).length,
+    [answers],
+  );
   const canSubmit = answeredCount === ANSWER_COUNT;
 
   const lockUntilMs = useMemo(() => {
@@ -1017,12 +1646,86 @@ export default function PHQ9() {
     return formatDateTime(lastSubmittedAt);
   }, [lastSubmittedAt]);
 
-  const canSubmitNow = canSubmit && termsAccepted && !weeklyLocked && !isSubmitting;
-  const isModalOpen = infoOpen || confirmReset || reviewOpen;
+  const canSubmitNow =
+    canSubmit &&
+    termsAccepted &&
+    disclaimerAccepted &&
+    !weeklyLocked &&
+    !isSubmitting;
+  const isModalOpen =
+    infoOpen ||
+    confirmReset ||
+    reviewOpen ||
+    submitConfirmOpen ||
+    disclaimerPreOpen ||
+    disclaimerPostOpen;
+  const tutorialSteps = useMemo(
+    () => [
+      {
+        targetRef: headingRef,
+        title: "Welcome to PHQ-9",
+        description:
+          "This quick check-in reflects the last 2 weeks. It’s a screening tool — not a diagnosis.",
+      },
+      {
+        targetRef: termsRef,
+        title: "Terms & Privacy",
+        description: "Open this to read details and accept before starting.",
+      },
+      {
+        targetRef: questionNavRef,
+        title: "Navigate questions",
+        description:
+          "Use these step dots to jump between the 9 questions (arrow keys work too).",
+      },
+      {
+        targetRef: questionCardRef,
+        title: "Answer the question",
+        description:
+          "Pick the option that fits best. The card tracks your progress and saves your choice.",
+      },
+      {
+        targetRef: actionsRef,
+        title: "Review & submit",
+        description:
+          "Review your answers, then submit. A weekly lock can prevent duplicate submissions.",
+      },
+    ],
+    [],
+  );
 
+  const closeTutorial = useCallback(() => {
+    markTutorialSeen(PHQ9_TUTORIAL_KEY);
+    setTutorialOpen(false);
+    setTutorialStep(0);
+  }, []);
+
+  const nextTutorialStep = useCallback(() => {
+    setTutorialStep((prev) => {
+      if (prev >= tutorialSteps.length - 1) {
+        closeTutorial();
+        return 0;
+      }
+      return prev + 1;
+    });
+  }, [closeTutorial, tutorialSteps.length]);
+
+  useEffect(() => {
+    if (!termsAccepted) return;
+    if (isModalOpen) return;
+    if (readTutorialSeen(PHQ9_TUTORIAL_KEY)) return;
+
+    const id = window.setTimeout(() => {
+      setTutorialOpen(true);
+      setTutorialStep(0);
+    }, 600);
+
+    return () => window.clearTimeout(id);
+  }, [termsAccepted, isModalOpen]);
   const clearAutoNext = useCallback(() => {
     if (!isBrowser()) return;
-    if (autoNextTimeoutRef.current) window.clearTimeout(autoNextTimeoutRef.current);
+    if (autoNextTimeoutRef.current)
+      window.clearTimeout(autoNextTimeoutRef.current);
     autoNextTimeoutRef.current = null;
   }, []);
 
@@ -1034,10 +1737,10 @@ export default function PHQ9() {
       navDirRef.current = nextIndex >= prevIndexRef.current ? 1 : -1;
       setActiveIndex(nextIndex);
     },
-    [clearAutoNext]
+    [clearAutoNext],
   );
 
-    /** Resolve user (for per-user draft keys) */
+  /** Resolve user (for per-user draft keys) */
   useEffect(() => {
     if (!isBrowser()) return;
     const id = safeGetUserId();
@@ -1058,12 +1761,21 @@ export default function PHQ9() {
     const token = safeGetToken();
 
     const savedAnswers = normalizeAnswers(
-      safeParseJSON(STORAGE.getItem(scopedKeys.answersDraft), Array(ANSWER_COUNT).fill(null))
+      safeParseJSON(
+        STORAGE.getItem(scopedKeys.answersDraft),
+        Array(ANSWER_COUNT).fill(null),
+      ),
     );
-    const savedTerms = Boolean(safeParseJSON(STORAGE.getItem(scopedKeys.termsAccepted), false));
+    const savedTerms = Boolean(
+      safeParseJSON(STORAGE.getItem(scopedKeys.termsAccepted), false),
+    );
+    const savedDisclaimer = Boolean(
+      safeParseJSON(STORAGE.getItem(scopedKeys.disclaimerAccepted), false),
+    );
 
     setAnswers(savedAnswers);
     setTermsAccepted(savedTerms);
+    setDisclaimerAccepted(savedDisclaimer);
     setNowMs(Date.now());
 
     if (!savedTerms) setInfoOpen(true);
@@ -1092,12 +1804,21 @@ export default function PHQ9() {
         setServerHistory(items);
 
         if (latest) {
-          const lastMs = new Date(latest.createdAt || latest.submittedAt || latest.updatedAt || Date.now()).getTime();
+          const lastMs = new Date(
+            latest.createdAt ||
+              latest.submittedAt ||
+              latest.updatedAt ||
+              Date.now(),
+          ).getTime();
           setLastSubmittedAt(lastMs);
 
           const lockedNow = Date.now() < lastMs + WEEK_MS;
           // If locked, show the last submitted answers read-only (matches your counselor view too)
-          if (lockedNow && Array.isArray(latest.answers) && latest.answers.length === ANSWER_COUNT) {
+          if (
+            lockedNow &&
+            Array.isArray(latest.answers) &&
+            latest.answers.length === ANSWER_COUNT
+          ) {
             setAnswers(normalizeAnswers(latest.answers));
             setActiveIndex(0);
           }
@@ -1113,13 +1834,40 @@ export default function PHQ9() {
     };
 
     run();
-  }, [scopedKeys.answersDraft, scopedKeys.termsAccepted, scopedKeys.lastSubmittedAt, userId]);
+  }, [
+    scopedKeys.answersDraft,
+    scopedKeys.termsAccepted,
+    scopedKeys.lastSubmittedAt,
+    scopedKeys.disclaimerAccepted,
+    userId,
+  ]);
 
   /** Persist per-user draft + terms + lastSubmittedAt fallback */
-  useEffect(() => STORAGE.setItem(scopedKeys.answersDraft, JSON.stringify(answers)), [scopedKeys.answersDraft, answers]);
-  useEffect(() => STORAGE.setItem(scopedKeys.termsAccepted, JSON.stringify(termsAccepted)), [scopedKeys.termsAccepted, termsAccepted]);
-  useEffect(() => PUBLIC_STORAGE.setItem(scopedKeys.lastSubmittedAt, JSON.stringify(lastSubmittedAt)), [scopedKeys.lastSubmittedAt, lastSubmittedAt]);
-
+  useEffect(
+    () => STORAGE.setItem(scopedKeys.answersDraft, JSON.stringify(answers)),
+    [scopedKeys.answersDraft, answers],
+  );
+  useEffect(
+    () =>
+      STORAGE.setItem(scopedKeys.termsAccepted, JSON.stringify(termsAccepted)),
+    [scopedKeys.termsAccepted, termsAccepted],
+  );
+  useEffect(
+    () =>
+      STORAGE.setItem(
+        scopedKeys.disclaimerAccepted,
+        JSON.stringify(disclaimerAccepted),
+      ),
+    [scopedKeys.disclaimerAccepted, disclaimerAccepted],
+  );
+  useEffect(
+    () =>
+      PUBLIC_STORAGE.setItem(
+        scopedKeys.lastSubmittedAt,
+        JSON.stringify(lastSubmittedAt),
+      ),
+    [scopedKeys.lastSubmittedAt, lastSubmittedAt],
+  );
 
   /** Keep clock updated while locked */
   useEffect(() => {
@@ -1155,6 +1903,49 @@ export default function PHQ9() {
     if (firstEmpty !== -1) setActiveIndex(firstEmpty);
   }, [answers, termsAccepted, submitted]);
 
+  /** Disclaimer gating + 10s countdown (before answering / after submitting) */
+  useEffect(() => {
+    if (!termsAccepted) return;
+    if (infoOpen) return;
+    if (submitted || weeklyLocked) return;
+    if (disclaimerAccepted) return;
+    if (disclaimerPreOpen) return;
+    setDisclaimerPreOpen(true);
+  }, [
+    termsAccepted,
+    infoOpen,
+    submitted,
+    weeklyLocked,
+    disclaimerAccepted,
+    disclaimerPreOpen,
+  ]);
+
+  useEffect(() => {
+    if (!isBrowser()) return;
+    if (!disclaimerPreOpen) return;
+    setPreDisclaimerSeconds(10);
+    const id = window.setInterval(
+      () => setPreDisclaimerSeconds((s) => (s <= 1 ? 0 : s - 1)),
+      1000,
+    );
+    return () => window.clearInterval(id);
+  }, [disclaimerPreOpen]);
+
+  useEffect(() => {
+    if (!isBrowser()) return;
+    if (!disclaimerPostOpen) return;
+    setPostDisclaimerSeconds(10);
+    const id = window.setInterval(
+      () => setPostDisclaimerSeconds((s) => (s <= 1 ? 0 : s - 1)),
+      1000,
+    );
+    return () => window.clearInterval(id);
+  }, [disclaimerPostOpen]);
+
+  useEffect(() => {
+    if (weeklyLocked && disclaimerPreOpen) setDisclaimerPreOpen(false);
+  }, [weeklyLocked, disclaimerPreOpen]);
+
   /** Track animation direction */
   const direction = navDirRef.current;
   useEffect(() => {
@@ -1164,6 +1955,7 @@ export default function PHQ9() {
   function setAnswer(qIndex, value) {
     if (readOnly) return;
     if (!termsAccepted) return;
+    if (!disclaimerAccepted) return;
     if (value < 0 || value > 3) return;
 
     setAnswers((prev) => {
@@ -1176,7 +1968,9 @@ export default function PHQ9() {
 
     if (qIndex < QUESTIONS.length - 1) {
       autoNextTimeoutRef.current = window.setTimeout(() => {
-        setActiveIndex((x) => (x === qIndex ? Math.min(x + 1, QUESTIONS.length - 1) : x));
+        setActiveIndex((x) =>
+          x === qIndex ? Math.min(x + 1, QUESTIONS.length - 1) : x,
+        );
       }, AUTO_NEXT_MS);
     }
   }
@@ -1206,10 +2000,16 @@ export default function PHQ9() {
         clientSubmittedAt: new Date().toISOString(),
       };
 
-      const data = await apiFetch("/assessments/phq9", { method: "POST", token, body: payload });
+      const data = await apiFetch("/assessments/phq9", {
+        method: "POST",
+        token,
+        body: payload,
+      });
 
       const item = data?.item;
-      const ts = item?.createdAt ? new Date(item.createdAt).getTime() : Date.now();
+      const ts = item?.createdAt
+        ? new Date(item.createdAt).getTime()
+        : Date.now();
 
       // Lock starts now (server enforces; UI mirrors it)
       setLastSubmittedAt(ts);
@@ -1217,19 +2017,26 @@ export default function PHQ9() {
       setSubmitted(true);
 
       // Use server answers as source-of-truth
-      if (Array.isArray(item?.answers) && item.answers.length === ANSWER_COUNT) {
+      if (
+        Array.isArray(item?.answers) &&
+        item.answers.length === ANSWER_COUNT
+      ) {
         setAnswers(normalizeAnswers(item.answers));
       }
 
       // Update local history cache (optional, used later for counselor-style modal if you add it)
       setServerHistory((prev) => (item ? [item, ...prev] : prev));
 
+      setDisclaimerPostOpen(true);
+
       // Clear draft (fresh draft will start after lock expires)
       STORAGE.removeItem(scopedKeys.answersDraft);
     } catch (e) {
       // Weekly lock from server
       if (e?.status === 429) {
-        const last = e?.data?.lastSubmittedAt ? new Date(e.data.lastSubmittedAt).getTime() : lastSubmittedAt;
+        const last = e?.data?.lastSubmittedAt
+          ? new Date(e.data.lastSubmittedAt).getTime()
+          : lastSubmittedAt;
         if (typeof last === "number") {
           setLastSubmittedAt(last);
           setNowMs(Date.now());
@@ -1268,9 +2075,15 @@ export default function PHQ9() {
     return getSeverityLabel(totalScore);
   }, [totalScore]);
 
-  const wellnessTips = useMemo(() => (severityLabel ? getWellnessTips(severityLabel) : []), [severityLabel]);
+  const wellnessTips = useMemo(
+    () => (severityLabel ? getWellnessTips(severityLabel) : []),
+    [severityLabel],
+  );
   const q9SafetyNote = useMemo(() => getSafetyNoteForQ9(answers[8]), [answers]);
-  const progressPct = useMemo(() => Math.round((answeredCount / ANSWER_COUNT) * 100), [answeredCount]);
+  const progressPct = useMemo(
+    () => Math.round((answeredCount / ANSWER_COUNT) * 100),
+    [answeredCount],
+  );
 
   const slideVariants = {
     enter: (dir) => ({ opacity: 0, x: dir > 0 ? 28 : -28 }),
@@ -1285,7 +2098,13 @@ export default function PHQ9() {
 
       const target = e.target;
       const tag = target?.tagName?.toLowerCase?.();
-      if (tag === "input" || tag === "textarea" || tag === "select" || target?.isContentEditable) return;
+      if (
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        target?.isContentEditable
+      )
+        return;
 
       if (e.key >= "0" && e.key <= "3") {
         if (readOnly) return;
@@ -1327,33 +2146,63 @@ export default function PHQ9() {
   function handleAddToCalendarWeekly() {
     if (!isBrowser()) return;
     const ics = makeWeeklyCheckInICS({ startAtMs: calendarStartAtMs });
-    downloadTextFile({ filename: "phq9-weekly-checkin.ics", text: ics, mime: "text/calendar;charset=utf-8" });
+    downloadTextFile({
+      filename: "phq9-weekly-checkin.ics",
+      text: ics,
+      mime: "text/calendar;charset=utf-8",
+    });
   }
 
   const headerStatusText = useMemo(() => {
     if (apiLoading) return "Loading your PHQ-9 history…";
     if (apiError) return apiError;
     if (!termsAccepted) return "Accept Terms & Privacy to begin.";
+    if (!disclaimerAccepted && !submitted && !weeklyLocked)
+      return "Read disclaimer to begin.";
     if (submitted) return "Submitted (read-only).";
-    if (weeklyLocked && nextAvailableText) return `Weekly lock — next submit: ${nextAvailableText}`;
+    if (weeklyLocked && nextAvailableText)
+      return `Weekly lock — next submit: ${nextAvailableText}`;
     if (!canSubmit) return "Answer all 9 questions to enable submit.";
     return "All set — review then submit.";
-  }, [termsAccepted, submitted, weeklyLocked, nextAvailableText, canSubmit]);
+  }, [
+    termsAccepted,
+    disclaimerAccepted,
+    submitted,
+    weeklyLocked,
+    nextAvailableText,
+    canSubmit,
+    apiLoading,
+    apiError,
+  ]);
 
   const primaryActionLabel = useMemo(() => {
     if (isSubmitting) return "Submitting…";
     if (submitted) return "Submitted";
     if (weeklyLocked) return "Weekly lock active";
     if (!termsAccepted) return "Accept to begin";
+    if (!disclaimerAccepted) return "Read disclaimer";
     if (!canSubmit) return "Complete all questions";
     return "Submit Assessment";
-  }, [submitted, weeklyLocked, termsAccepted, canSubmit]);
+  }, [
+    submitted,
+    weeklyLocked,
+    termsAccepted,
+    disclaimerAccepted,
+    canSubmit,
+    isSubmitting,
+  ]);
 
-  const disableInteractions = isModalOpen || !termsAccepted || readOnly;
+  const disableInteractions =
+    isModalOpen || !termsAccepted || !disclaimerAccepted || readOnly;
 
   function openReview() {
     if (!termsAccepted) return;
     setReviewOpen(true);
+  }
+
+  function requestSubmit() {
+    if (!canSubmitNow) return;
+    setSubmitConfirmOpen(true);
   }
 
   function onEditFromReview(idx) {
@@ -1366,7 +2215,8 @@ export default function PHQ9() {
     <div
       className={`min-h-screen relative overflow-hidden ${TXT.base}`}
       style={{
-        fontFamily: "Nunito, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
+        fontFamily:
+          "Nunito, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif",
         ...STYLES.pageBg,
       }}
       aria-hidden={isModalOpen ? "true" : undefined}
@@ -1375,7 +2225,16 @@ export default function PHQ9() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Lora:wght@400;600;700&display=swap');`}</style>
 
       <BackgroundFX />
-
+      <ServiceTutorialOverlay
+        open={tutorialOpen}
+        steps={tutorialSteps}
+        stepIndex={tutorialStep}
+        onNext={nextTutorialStep}
+        onSkip={closeTutorial}
+        ariaLabel="PHQ-9 tutorial"
+        accentColor={CHECKIN_GREEN}
+        accentText={CHECKIN_DARK}
+      />
       {/* ===== Modals ===== */}
       <InfoModal
         open={infoOpen}
@@ -1394,76 +2253,193 @@ export default function PHQ9() {
           resetAssessment();
         }}
       />
-      <ReviewModal open={reviewOpen} onClose={() => setReviewOpen(false)} answers={answers} onEdit={onEditFromReview} canEdit={!readOnly && termsAccepted} />
+      <ReviewModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        answers={answers}
+        onEdit={onEditFromReview}
+        canEdit={!readOnly && termsAccepted}
+      />
+      <DisclaimerViewModal
+        open={disclaimerViewOpen}
+        title="Disclaimer"
+        subtitle="You can review this anytime."
+        lines={defaultBeforeAnsweringDisclaimerText()}
+        onClose={() => setDisclaimerViewOpen(false)}
+      />
+      <TimedDisclaimerModal
+        open={disclaimerPreOpen}
+        title="Before you start"
+        subtitle="Please read this disclaimer before answering."
+        lines={defaultBeforeAnsweringDisclaimerText()}
+        secondsLeft={preDisclaimerSeconds}
+        confirmLabel="I Understand"
+        onConfirm={() => {
+          setDisclaimerAccepted(true);
+          setDisclaimerPreOpen(false);
+        }}
+      />
+
+      <SubmitConfirmModal
+        open={submitConfirmOpen}
+        onClose={() => setSubmitConfirmOpen(false)}
+        onConfirm={() => {
+          setSubmitConfirmOpen(false);
+          handleSubmit();
+        }}
+        disabled={isSubmitting}
+      />
+
+      <TimedDisclaimerModal
+        open={disclaimerPostOpen}
+        title="After submitting"
+        subtitle="Please read this disclaimer."
+        lines={defaultAfterSubmissionDisclaimerText()}
+        secondsLeft={postDisclaimerSeconds}
+        confirmLabel="Close"
+        onConfirm={() => setDisclaimerPostOpen(false)}
+      />
 
       {/* ===== Page Wrapper (adds space under global navbar) ===== */}
-      <div className="pb-10 relative z-[1]" style={{ paddingTop: PAGE_TOP_PAD }}>
+      <div
+        className="pb-10 relative z-[1]"
+        style={{ paddingTop: PAGE_TOP_PAD }}
+      >
         <div className="max-w-6xl mx-auto px-3 sm:px-6">
           {/* ===== Sticky Header (below navbar + extra space) ===== */}
-          <div className="sticky z-20 -mx-3 sm:-mx-6 px-3 sm:px-6 pt-3 pb-3" style={{ top: STICKY_TOP }}>
+          <div
+            className="sticky z-20 -mx-3 sm:-mx-6 px-3 sm:px-6 pt-3 pb-3"
+            style={{ top: STICKY_TOP }}
+          >
             <motion.div
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.25, ease: "easeOut" }}
+              transition={
+                shouldReduceMotion
+                  ? { duration: 0 }
+                  : { duration: 0.25, ease: "easeOut" }
+              }
               className="relative rounded-[28px] border border-black/10 bg-white/78 backdrop-blur-xl shadow-[0_22px_70px_rgba(0,0,0,0.10)] p-5 sm:p-6 lg:p-7 overflow-hidden"
             >
-              <div className="absolute inset-0 opacity-35" style={STYLES.headerGlow} />
+              <div
+                className="absolute inset-0 opacity-35"
+                style={STYLES.headerGlow}
+              />
               <motion.div
                 className="absolute inset-0 opacity-[0.10]"
                 style={STYLES.headerDots}
-                animate={shouldReduceMotion ? {} : { backgroundPosition: ["0px 0px", "24px 24px"] }}
-                transition={shouldReduceMotion ? {} : { duration: 10, repeat: Infinity, ease: "linear" }}
+                animate={
+                  shouldReduceMotion
+                    ? {}
+                    : { backgroundPosition: ["0px 0px", "24px 24px"] }
+                }
+                transition={
+                  shouldReduceMotion
+                    ? {}
+                    : { duration: 10, repeat: Infinity, ease: "linear" }
+                }
               />
 
               <div className="relative flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                 <div className="flex items-start gap-3 min-w-0">
                   <motion.div
                     className="h-11 w-11 rounded-2xl flex items-center justify-center shadow-sm shrink-0"
-                    style={{ backgroundColor: CHECKIN_GREEN, color: CHECKIN_DARK }}
+                    style={{
+                      backgroundColor: CHECKIN_GREEN,
+                      color: CHECKIN_DARK,
+                    }}
                     initial={{ rotate: -2 }}
                     animate={shouldReduceMotion ? {} : { rotate: [-2, 2, -2] }}
-                    transition={shouldReduceMotion ? {} : { duration: 7.5, repeat: Infinity, ease: "easeInOut" }}
+                    transition={
+                      shouldReduceMotion
+                        ? {}
+                        : { duration: 7.5, repeat: Infinity, ease: "easeInOut" }
+                    }
                     aria-hidden="true"
                   >
                     <IconInfo className="h-6 w-6" />
                   </motion.div>
 
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h1 className={`font-black text-[#141414] leading-tight ${TXT.xl}`} style={{ fontFamily: "Lora, serif" }}>
+                    <div
+                      ref={headingRef}
+                      className="flex items-center gap-2 flex-wrap"
+                    >
+                      <h1
+                        className={`font-black text-[#141414] leading-tight ${TXT.xl}`}
+                        style={{ fontFamily: "Lora, serif" }}
+                      >
                         CheckIn: PHQ-9
                       </h1>
+
+                      <PillButton
+                        onClick={() => {
+                          if (!termsAccepted || isModalOpen) return;
+                          setTutorialStep(0);
+                          setTutorialOpen(true);
+                        }}
+                        disabled={!termsAccepted || isModalOpen}
+                        icon={<span className="text-[14px]">ℹ️</span>}
+                      >
+                        Instructions
+                      </PillButton>
 
                       {submitted && (
                         <span
                           className={`inline-flex items-center rounded-full border px-3 py-1 font-extrabold ${TXT.xs}`}
-                          style={{ backgroundColor: CHECKIN_GREEN, color: CHECKIN_DARK, borderColor: "rgba(0,0,0,0.15)" }}
+                          style={{
+                            backgroundColor: CHECKIN_GREEN,
+                            color: CHECKIN_DARK,
+                            borderColor: "rgba(0,0,0,0.15)",
+                          }}
                         >
                           Submitted
                         </span>
                       )}
 
                       {!submitted && weeklyLocked && (
-                        <span className={`inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 font-extrabold text-black/70 ${TXT.xs}`}>
+                        <span
+                          className={`inline-flex items-center rounded-full border border-black/15 bg-black/5 px-3 py-1 font-extrabold text-black/70 ${TXT.xs}`}
+                        >
                           Weekly lock
                         </span>
                       )}
                     </div>
 
-                    <div className={`mt-2 font-extrabold text-black/60 ${TXT.xs}`}>{headerStatusText}</div>
+                    <div
+                      className={`mt-2 font-extrabold text-black/60 ${TXT.xs}`}
+                    >
+                      {headerStatusText}
+                    </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <PillButton onClick={() => setInfoOpen(true)} disabled={false} icon={<IconInfo className="h-4 w-4" />}>
-                        Terms &amp; Privacy
-                      </PillButton>
+                      <span ref={termsRef} className="contents">
+                        <PillButton
+                          onClick={() => setInfoOpen(true)}
+                          disabled={false}
+                          icon={<IconInfo className="h-4 w-4" />}
+                        >
+                          Terms &amp; Privacy
+                        </PillButton>
+                      </span>
 
-                      <PillButton onClick={handleAddToCalendarWeekly} disabled={!termsAccepted} icon={<span className="text-[16px] leading-none">🗓</span>}>
+                      <PillButton
+                        onClick={handleAddToCalendarWeekly}
+                        disabled={!termsAccepted}
+                        icon={
+                          <span className="text-[16px] leading-none">🗓</span>
+                        }
+                      >
                         Weekly reminder
                       </PillButton>
 
                       <span
                         className={`inline-flex items-center rounded-full border px-3 py-2 font-extrabold ${TXT.xs}`}
-                        style={{ background: "rgba(185,255,102,0.18)", borderColor: "rgba(0,0,0,0.10)", color: CHECKIN_DARK }}
+                        style={{
+                          background: "rgba(185,255,102,0.18)",
+                          borderColor: "rgba(0,0,0,0.10)",
+                          color: CHECKIN_DARK,
+                        }}
                         aria-label="Progress"
                       >
                         {progressPct}% done
@@ -1473,24 +2449,46 @@ export default function PHQ9() {
                 </div>
 
                 <div className="relative flex flex-col gap-3">
-                  <div className="flex flex-wrap gap-2 justify-start lg:justify-end">
+                  <div
+                    ref={questionNavRef}
+                    className="flex flex-wrap gap-2 justify-start lg:justify-end"
+                  >
                     {QUESTIONS.map((_, i) => (
-                      <StepDot key={i} index={i} active={i === activeIndex} done={answers[i] !== null} disabled={isModalOpen} onClick={() => navigateTo(i)} />
+                      <StepDot
+                        key={i}
+                        index={i}
+                        active={i === activeIndex}
+                        done={answers[i] !== null}
+                        disabled={isModalOpen}
+                        onClick={() => navigateTo(i)}
+                      />
                     ))}
                   </div>
 
                   <div className="mt-1">
-                    <div className={`font-extrabold text-black/60 flex items-center justify-between ${TXT.xs}`}>
+                    <div
+                      className={`font-extrabold text-black/60 flex items-center justify-between ${TXT.xs}`}
+                    >
                       <span>Progress</span>
                       <span>{progressPct}%</span>
                     </div>
-                    <div className="mt-2 h-3 w-full overflow-hidden rounded-full bg-black/10" aria-labelledby={progressId}>
+                    <div
+                      className="mt-2 h-3 w-full overflow-hidden rounded-full bg-black/10"
+                      aria-labelledby={progressId}
+                    >
                       <motion.div
                         className="h-full rounded-full"
-                        style={{ background: "linear-gradient(180deg, #B9FF66, #A3F635)" }}
+                        style={{
+                          background:
+                            "linear-gradient(180deg, #B9FF66, #A3F635)",
+                        }}
                         initial={false}
                         animate={{ width: `${progressPct}%` }}
-                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.35, ease: "easeOut" }}
+                        transition={
+                          shouldReduceMotion
+                            ? { duration: 0 }
+                            : { duration: 0.35, ease: "easeOut" }
+                        }
                       />
                     </div>
                     <span id={progressId} className="sr-only">
@@ -1508,7 +2506,7 @@ export default function PHQ9() {
           {/* ===== Main Content Grid ===== */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start pb-24 lg:pb-10">
             {/* ===== Left: Question ===== */}
-            <div className="lg:col-span-2">
+            <div ref={questionCardRef} className="lg:col-span-2">
               <GlassCard
                 title={
                   <span className="flex items-center gap-2">
@@ -1527,7 +2525,13 @@ export default function PHQ9() {
                           transition={{ duration: 0.16 }}
                           className="inline-flex items-center gap-2 font-extrabold"
                         >
-                          <span className="h-8 w-8 rounded-full border border-black/10 inline-flex items-center justify-center" style={{ backgroundColor: CHECKIN_DARK, color: "white" }}>
+                          <span
+                            className="h-8 w-8 rounded-full border border-black/10 inline-flex items-center justify-center"
+                            style={{
+                              backgroundColor: CHECKIN_DARK,
+                              color: "white",
+                            }}
+                          >
                             <IconCheck className="h-4 w-4" />
                           </span>
                           Saved
@@ -1549,12 +2553,27 @@ export default function PHQ9() {
                     initial="enter"
                     animate="center"
                     exit="exit"
-                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: "easeOut" }}
+                    transition={
+                      shouldReduceMotion
+                        ? { duration: 0 }
+                        : { duration: 0.22, ease: "easeOut" }
+                    }
                   >
-                    <div className={`font-extrabold text-[#141414] leading-snug ${TXT.lg}`}>{activeQuestion}</div>
-                    <div className={`mt-2 text-black/60 ${TXT.xs}`}>Over the last 2 weeks, how often have you been bothered by this?</div>
+                    <div
+                      className={`font-extrabold text-[#141414] leading-snug ${TXT.lg}`}
+                    >
+                      {activeQuestion}
+                    </div>
+                    <div className={`mt-2 text-black/60 ${TXT.xs}`}>
+                      Over the last 2 weeks, how often have you been bothered by
+                      this?
+                    </div>
 
-                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3" role="radiogroup" aria-label={`PHQ-9 question ${activeIndex + 1}`}>
+                    <div
+                      className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3"
+                      role="radiogroup"
+                      aria-label={`PHQ-9 question ${activeIndex + 1}`}
+                    >
                       {OPTIONS.map((opt) => (
                         <OptionCard
                           key={opt.value}
@@ -1572,10 +2591,22 @@ export default function PHQ9() {
                         type="button"
                         onClick={() => navigateTo(activeIndex - 1)}
                         disabled={activeIndex === 0 || isModalOpen}
-                        whileHover={activeIndex !== 0 && !isModalOpen ? { y: -1 } : undefined}
-                        whileTap={activeIndex !== 0 && !isModalOpen ? { scale: 0.99 } : undefined}
+                        whileHover={
+                          activeIndex !== 0 && !isModalOpen
+                            ? { y: -1 }
+                            : undefined
+                        }
+                        whileTap={
+                          activeIndex !== 0 && !isModalOpen
+                            ? { scale: 0.99 }
+                            : undefined
+                        }
                         className={`rounded-full px-5 py-3 font-extrabold bg-white/85 backdrop-blur hover:bg-black/5 transition disabled:opacity-40 ${TXT.sm}`}
-                        style={{ border: "1px solid rgba(0,0,0,0.14)", color: CHECKIN_DARK, boxShadow: "0 14px 30px rgba(0,0,0,0.05)" }}
+                        style={{
+                          border: "1px solid rgba(0,0,0,0.14)",
+                          color: CHECKIN_DARK,
+                          boxShadow: "0 14px 30px rgba(0,0,0,0.05)",
+                        }}
                       >
                         <span className="inline-flex items-center gap-1">
                           <IconChevron dir="left" className="h-4 w-4" />
@@ -1586,11 +2617,25 @@ export default function PHQ9() {
                       <motion.button
                         type="button"
                         onClick={() => navigateTo(activeIndex + 1)}
-                        disabled={activeIndex === QUESTIONS.length - 1 || isModalOpen}
-                        whileHover={activeIndex !== QUESTIONS.length - 1 && !isModalOpen ? { y: -1 } : undefined}
-                        whileTap={activeIndex !== QUESTIONS.length - 1 && !isModalOpen ? { scale: 0.99 } : undefined}
+                        disabled={
+                          activeIndex === QUESTIONS.length - 1 || isModalOpen
+                        }
+                        whileHover={
+                          activeIndex !== QUESTIONS.length - 1 && !isModalOpen
+                            ? { y: -1 }
+                            : undefined
+                        }
+                        whileTap={
+                          activeIndex !== QUESTIONS.length - 1 && !isModalOpen
+                            ? { scale: 0.99 }
+                            : undefined
+                        }
                         className={`rounded-full px-5 py-3 font-extrabold bg-white/85 backdrop-blur hover:bg-black/5 transition disabled:opacity-40 ${TXT.sm}`}
-                        style={{ border: "1px solid rgba(0,0,0,0.14)", color: CHECKIN_DARK, boxShadow: "0 14px 30px rgba(0,0,0,0.05)" }}
+                        style={{
+                          border: "1px solid rgba(0,0,0,0.14)",
+                          color: CHECKIN_DARK,
+                          boxShadow: "0 14px 30px rgba(0,0,0,0.05)",
+                        }}
                       >
                         <span className="inline-flex items-center gap-1">
                           Next
@@ -1600,9 +2645,14 @@ export default function PHQ9() {
                     </div>
 
                     {readOnly && (
-                      <div className={`mt-4 rounded-2xl border border-black/10 bg-black/5 p-4 text-black/70 ${TXT.xs}`}>
-                        This assessment is currently <span className="font-extrabold">read-only</span>{" "}
-                        {submitted ? "because it was submitted." : "because the weekly lock is active."}
+                      <div
+                        className={`mt-4 rounded-2xl border border-black/10 bg-black/5 p-4 text-black/70 ${TXT.xs}`}
+                      >
+                        This assessment is currently{" "}
+                        <span className="font-extrabold">read-only</span>{" "}
+                        {submitted
+                          ? "because it was submitted."
+                          : "because the weekly lock is active."}
                       </div>
                     )}
                   </motion.div>
@@ -1612,18 +2662,29 @@ export default function PHQ9() {
               {submitted && (
                 <div className="mt-4 space-y-4">
                   <GlassCard title="Results">
-                    <div className={`rounded-2xl border border-black/10 bg-black/5 p-4 text-black/70 ${TXT.sm}`}>
+                    <div
+                      className={`rounded-2xl border border-black/10 bg-black/5 p-4 text-black/70 ${TXT.sm}`}
+                    >
                       Thank you. Your responses have been recorded.
                     </div>
 
                     {severityLabel && (
                       <div className="mt-4 rounded-2xl border border-black/10 bg-white/85 p-4">
-                        <div className={`font-extrabold text-[#141414] ${TXT.sm}`}>
-                          Severity: <span className="text-black/70">{severityLabel}</span>
+                        <div
+                          className={`font-extrabold text-[#141414] ${TXT.sm}`}
+                        >
+                          Severity:{" "}
+                          <span className="text-black/70">{severityLabel}</span>
                         </div>
 
-                        <div className={`mt-4 font-extrabold text-[#141414] ${TXT.sm}`}>Wellness tips</div>
-                        <ul className={`mt-2 list-disc pl-5 space-y-2 text-black/70 ${TXT.sm}`}>
+                        <div
+                          className={`mt-4 font-extrabold text-[#141414] ${TXT.sm}`}
+                        >
+                          Wellness tips
+                        </div>
+                        <ul
+                          className={`mt-2 list-disc pl-5 space-y-2 text-black/70 ${TXT.sm}`}
+                        >
                           {wellnessTips.map((t, idx) => (
                             <li key={idx}>{t}</li>
                           ))}
@@ -1633,8 +2694,14 @@ export default function PHQ9() {
 
                     {q9SafetyNote && (
                       <div className="mt-4 rounded-2xl border border-black/10 bg-white/85 p-4">
-                        <div className={`font-extrabold text-[#141414] ${TXT.sm}`}>Important</div>
-                        <p className={`mt-2 text-black/70 ${TXT.sm}`}>{q9SafetyNote}</p>
+                        <div
+                          className={`font-extrabold text-[#141414] ${TXT.sm}`}
+                        >
+                          Important
+                        </div>
+                        <p className={`mt-2 text-black/70 ${TXT.sm}`}>
+                          {q9SafetyNote}
+                        </p>
                       </div>
                     )}
                   </GlassCard>
@@ -1643,49 +2710,84 @@ export default function PHQ9() {
             </div>
 
             {/* ===== Right: Actions ===== */}
-            <div className="lg:col-span-1 lg:sticky" style={{ top: ACTIONS_STICKY_TOP }}>
+            <div
+              ref={actionsRef}
+              className="lg:col-span-1 lg:sticky"
+              style={{ top: ACTIONS_STICKY_TOP }}
+            >
               <GlassCard title="Actions">
-                <div className={`text-black/60 ${TXT.xs}`}>{readOnly ? "Read-only." : "Review and submit when complete."}</div>
+                <div className={`text-black/60 ${TXT.xs}`}>
+                  {readOnly ? "Read-only." : "Review and submit when complete."}
+                </div>
 
                 <div className="mt-4 space-y-3">
                   {!!lastSubmittedText && (
                     <div
                       className={`rounded-2xl border border-black/10 p-3 text-black/70 ${TXT.xs}`}
-                      style={{ background: "linear-gradient(180deg, rgba(185,255,102,0.16) 0%, rgba(0,0,0,0.03) 100%)" }}
+                      style={{
+                        background:
+                          "linear-gradient(180deg, rgba(185,255,102,0.16) 0%, rgba(0,0,0,0.03) 100%)",
+                      }}
                     >
-                      <div className="font-extrabold text-black/70">Last submission</div>
+                      <div className="font-extrabold text-black/70">
+                        Last submission
+                      </div>
                       <div className="mt-1">{lastSubmittedText}</div>
                       {weeklyLocked && nextAvailableText && (
                         <>
-                          <div className="mt-3 font-extrabold text-black/70">Next available</div>
+                          <div className="mt-3 font-extrabold text-black/70">
+                            Next available
+                          </div>
                           <div className="mt-1">{nextAvailableText}</div>
                         </>
                       )}
                     </div>
                   )}
 
-                  <SecondaryButton onClick={openReview} disabled={!termsAccepted}>
+                  <SecondaryButton
+                    onClick={openReview}
+                    disabled={!termsAccepted}
+                  >
                     Review answers
                   </SecondaryButton>
 
-                  <PrimaryButton onClick={handleSubmit} disabled={!canSubmitNow}>
+                  <PrimaryButton
+                    onClick={requestSubmit}
+                    disabled={!canSubmitNow}
+                  >
                     {primaryActionLabel}
                   </PrimaryButton>
 
                   {!canSubmit && termsAccepted && !submitted && (
                     <div className={`text-black/55 ${TXT.xs}`}>
-                      Remaining: <span className="font-extrabold text-black">{ANSWER_COUNT - answeredCount}</span>
+                      Remaining:{" "}
+                      <span className="font-extrabold text-black">
+                        {ANSWER_COUNT - answeredCount}
+                      </span>
                     </div>
                   )}
 
                   {weeklyLocked && nextAvailableText && (
                     <div className={`text-black/55 ${TXT.xs}`}>
-                      You can submit again on <span className="font-extrabold text-black">{nextAvailableText}</span>.
+                      You can submit again on{" "}
+                      <span className="font-extrabold text-black">
+                        {nextAvailableText}
+                      </span>
+                      .
                     </div>
                   )}
 
-                  <SecondaryButton onClick={() => setConfirmReset(true)} disabled={readOnly || !termsAccepted}>
+                  <SecondaryButton
+                    onClick={() => setConfirmReset(true)}
+                    disabled={readOnly || !termsAccepted}
+                  >
                     Reset
+                  </SecondaryButton>
+                  <SecondaryButton
+                    onClick={() => setDisclaimerViewOpen(true)}
+                    disabled={!termsAccepted || isModalOpen}
+                  >
+                    View disclaimer
                   </SecondaryButton>
                 </div>
               </GlassCard>
@@ -1702,9 +2804,14 @@ export default function PHQ9() {
               type="button"
               onClick={() => navigateTo(activeIndex - 1)}
               disabled={activeIndex === 0 || isModalOpen}
-              whileTap={activeIndex !== 0 && !isModalOpen ? { scale: 0.99 } : undefined}
+              whileTap={
+                activeIndex !== 0 && !isModalOpen ? { scale: 0.99 } : undefined
+              }
               className={`rounded-full px-4 py-3 font-extrabold bg-white hover:bg-black/5 transition disabled:opacity-40 ${TXT.sm}`}
-              style={{ border: "1px solid rgba(0,0,0,0.15)", color: CHECKIN_DARK }}
+              style={{
+                border: "1px solid rgba(0,0,0,0.15)",
+                color: CHECKIN_DARK,
+              }}
             >
               <span className="inline-flex items-center justify-center gap-1">
                 <IconChevron dir="left" className="h-4 w-4" />
@@ -1716,9 +2823,14 @@ export default function PHQ9() {
               type="button"
               onClick={openReview}
               disabled={!termsAccepted || isModalOpen}
-              whileTap={termsAccepted && !isModalOpen ? { scale: 0.99 } : undefined}
+              whileTap={
+                termsAccepted && !isModalOpen ? { scale: 0.99 } : undefined
+              }
               className={`rounded-full px-4 py-3 font-extrabold bg-white hover:bg-black/5 transition disabled:opacity-40 ${TXT.sm}`}
-              style={{ border: "1px solid rgba(0,0,0,0.15)", color: CHECKIN_DARK }}
+              style={{
+                border: "1px solid rgba(0,0,0,0.15)",
+                color: CHECKIN_DARK,
+              }}
             >
               Review
             </motion.button>
@@ -1727,9 +2839,16 @@ export default function PHQ9() {
               type="button"
               onClick={() => navigateTo(activeIndex + 1)}
               disabled={activeIndex === QUESTIONS.length - 1 || isModalOpen}
-              whileTap={activeIndex !== QUESTIONS.length - 1 && !isModalOpen ? { scale: 0.99 } : undefined}
+              whileTap={
+                activeIndex !== QUESTIONS.length - 1 && !isModalOpen
+                  ? { scale: 0.99 }
+                  : undefined
+              }
               className={`rounded-full px-4 py-3 font-extrabold bg-white hover:bg-black/5 transition disabled:opacity-40 ${TXT.sm}`}
-              style={{ border: "1px solid rgba(0,0,0,0.15)", color: CHECKIN_DARK }}
+              style={{
+                border: "1px solid rgba(0,0,0,0.15)",
+                color: CHECKIN_DARK,
+              }}
             >
               <span className="inline-flex items-center justify-center gap-1">
                 Next

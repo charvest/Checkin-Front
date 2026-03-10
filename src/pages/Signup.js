@@ -2466,9 +2466,9 @@ export default function Signup() {
             className="w-full mx-auto lg:mx-0 lg:justify-self-start"
             style={{ maxWidth: "600px" }}
           >
-            <div className="relative px-1 sm:px-0">
-              <h1 className="text-[28px] sm:text-[36px] font-black tracking-[.22em] sm:tracking-[.26em] leading-tight text-black drop-shadow-sm">
-                SIGN UP
+            <div className="relative px-1 sm:px-0 py-6 sm:py-8">
+               <h1 className="text-[28px] sm:text-[36px] font-black tracking-[.22em] sm:tracking-[.26em] leading-tight text-black drop-shadow-sm">
+                 SIGN UP
               </h1>
               <p className="text-[13px] sm:text-[15px] text-black/80 mt-2">
                 Create your account. It only takes a minute.
