@@ -100,7 +100,7 @@ function ServiceTutorialOverlay({ open, steps, stepIndex, onNext, onSkip }) {
         type="button"
         aria-label="Skip tutorial"
         onClick={onSkip}
-        className="absolute inset-0 bg-black/45"
+        className="absolute inset-0 bg-black/25"
       />
 
       {rect && (

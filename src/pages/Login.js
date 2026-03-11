@@ -135,11 +135,16 @@ function DomeGallery({
   const lastTsRef = useRef(0);
   const pauseUntilRef = useRef(0);
 
-  const items = useMemo(() => dgBuildItems(images, segments), [images, segments]);
+  const items = useMemo(
+    () => dgBuildItems(images, segments),
+    [images, segments],
+  );
 
   const [interactionsDisabled, setInteractionsDisabled] = useState(() => {
     if (typeof window === "undefined" || !window.matchMedia) return false;
-    const mqSmall = window.matchMedia(`(max-width: ${disableInteractionMaxWidth}px)`);
+    const mqSmall = window.matchMedia(
+      `(max-width: ${disableInteractionMaxWidth}px)`,
+    );
     const mqTouch = window.matchMedia("(hover: none) and (pointer: coarse)");
     return mqSmall.matches || mqTouch.matches;
   });
@@ -147,9 +152,12 @@ function DomeGallery({
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return undefined;
 
-    const mqSmall = window.matchMedia(`(max-width: ${disableInteractionMaxWidth}px)`);
+    const mqSmall = window.matchMedia(
+      `(max-width: ${disableInteractionMaxWidth}px)`,
+    );
     const mqTouch = window.matchMedia("(hover: none) and (pointer: coarse)");
-    const recompute = () => setInteractionsDisabled(mqSmall.matches || mqTouch.matches);
+    const recompute = () =>
+      setInteractionsDisabled(mqSmall.matches || mqTouch.matches);
 
     if (mqSmall.addEventListener) mqSmall.addEventListener("change", recompute);
     else mqSmall.addListener(recompute);
@@ -160,10 +168,12 @@ function DomeGallery({
     recompute();
 
     return () => {
-      if (mqSmall.removeEventListener) mqSmall.removeEventListener("change", recompute);
+      if (mqSmall.removeEventListener)
+        mqSmall.removeEventListener("change", recompute);
       else mqSmall.removeListener(recompute);
 
-      if (mqTouch.removeEventListener) mqTouch.removeEventListener("change", recompute);
+      if (mqTouch.removeEventListener)
+        mqTouch.removeEventListener("change", recompute);
       else mqTouch.removeListener(recompute);
     };
   }, [disableInteractionMaxWidth]);
@@ -215,7 +225,10 @@ function DomeGallery({
       root.style.setProperty("--viewer-pad", `${viewerPad}px`);
       root.style.setProperty("--tile-radius", imageBorderRadius);
       root.style.setProperty("--enlarge-radius", openedImageBorderRadius);
-      root.style.setProperty("--image-filter", grayscale ? "grayscale(1)" : "none");
+      root.style.setProperty(
+        "--image-filter",
+        grayscale ? "grayscale(1)" : "none",
+      );
       root.style.setProperty("--color-filter", colorFilter);
 
       applyTransform(rotationRef.current.x, rotationRef.current.y);
@@ -348,13 +361,24 @@ function DomeGallery({
         frameR && frameR.width > 0 && frameR.height > 0
           ? Math.min(frameR.width, frameR.height)
           : Math.min(rootR.width, rootR.height);
-      const desiredFromViewport = Math.min(window.innerWidth, window.innerHeight) - viewerPad * 2;
+      const desiredFromViewport =
+        Math.min(window.innerWidth, window.innerHeight) - viewerPad * 2;
 
-      let size = Math.min(desiredFromFrame, desiredFromViewport, safeW, safeH, 900);
+      let size = Math.min(
+        desiredFromFrame,
+        desiredFromViewport,
+        safeW,
+        safeH,
+        900,
+      );
       size = Math.max(size, 320);
 
-      const centerX = frameR ? frameR.left + frameR.width / 2 : safeMinX + safeW / 2;
-      const centerY = frameR ? frameR.top + frameR.height / 2 : safeMinY + safeH / 2;
+      const centerX = frameR
+        ? frameR.left + frameR.width / 2
+        : safeMinX + safeW / 2;
+      const centerY = frameR
+        ? frameR.top + frameR.height / 2
+        : safeMinY + safeH / 2;
 
       let left = Math.round(centerX - size / 2 - rootR.left);
       let top = Math.round(centerY - size / 2 - rootR.top);
@@ -465,9 +489,20 @@ function DomeGallery({
         pauseUntilRef.current = performance.now() + autoRotateIdleDelayMs;
       },
 
-      onDrag: ({ event, last, velocity: velArr = [0, 0], direction: dirArr = [0, 0], movement }) => {
+      onDrag: ({
+        event,
+        last,
+        velocity: velArr = [0, 0],
+        direction: dirArr = [0, 0],
+        movement,
+      }) => {
         if (interactionsDisabled) return;
-        if (focusedElRef.current || !draggingRef.current || !startPosRef.current) return;
+        if (
+          focusedElRef.current ||
+          !draggingRef.current ||
+          !startPosRef.current
+        )
+          return;
 
         const dxTotal = event.clientX - startPosRef.current.x;
         const dyTotal = event.clientY - startPosRef.current.y;
@@ -509,7 +544,11 @@ function DomeGallery({
         let vx = vMagX * dirX;
         let vy = vMagY * dirY;
 
-        if (Math.abs(vx) < 0.001 && Math.abs(vy) < 0.001 && Array.isArray(movement)) {
+        if (
+          Math.abs(vx) < 0.001 &&
+          Math.abs(vy) < 0.001 &&
+          Array.isArray(movement)
+        ) {
           const [mx, my] = movement;
           vx = (mx / dragSensitivity) * 0.02;
           vy = (my / dragSensitivity) * 0.02;
@@ -608,7 +647,9 @@ function DomeGallery({
       inset: 0;
       z-index: 0;
       pointer-events: none;
-      background: ${showBackdrop ? `
+      background: ${
+        showBackdrop
+          ? `
         radial-gradient(1100px 720px at 16% 16%,
           rgba(185,255,102,0.62) 0%,
           rgba(214,255,173,0.38) 32%,
@@ -624,7 +665,9 @@ function DomeGallery({
           rgba(250,252,248,1) 58%,
           rgba(245,250,244,1) 100%
         );
-      ` : "none"};
+      `
+          : "none"
+      };
     }
 
     .dg-bg::after{
@@ -816,7 +859,12 @@ function DomeGallery({
                       openItemFromElement(e.currentTarget);
                     }}
                   >
-                    <img src={it.src} draggable={false} alt={it.alt} className="dg-tile-img" />
+                    <img
+                      src={it.src}
+                      draggable={false}
+                      alt={it.alt}
+                      className="dg-tile-img"
+                    />
                   </div>
                 </div>
               ))}
@@ -935,7 +983,8 @@ function EyeIcon({ open }) {
 function formatFieldError(errorText) {
   if (!errorText) return "";
   const norm = String(errorText).trim();
-  if (/^must be filled out/i.test(norm) && !norm.endsWith("*")) return `${norm}*`;
+  if (/^must be filled out/i.test(norm) && !norm.endsWith("*"))
+    return `${norm}*`;
   return norm;
 }
 
@@ -959,7 +1008,9 @@ function FieldInput({
   return (
     <div className="w-full">
       <div className="mb-1 flex items-end justify-between gap-3">
-        <span className="block text-[13px] font-extrabold text-black/90">{label}</span>
+        <span className="block text-[13px] font-extrabold text-black/90">
+          {label}
+        </span>
       </div>
 
       <div className="relative">
@@ -987,7 +1038,9 @@ function FieldInput({
         />
 
         {rightSlot ? (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightSlot}</div>
+          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+            {rightSlot}
+          </div>
         ) : null}
       </div>
 
@@ -1035,7 +1088,9 @@ function OrDivider() {
   return (
     <div className="flex items-center gap-3 py-1">
       <div className="h-px bg-black/15 flex-1" />
-      <span className="text-[11px] font-extrabold tracking-[0.22em] text-black/55">OR</span>
+      <span className="text-[11px] font-extrabold tracking-[0.22em] text-black/55">
+        OR
+      </span>
       <div className="h-px bg-black/15 flex-1" />
     </div>
   );
@@ -1066,7 +1121,9 @@ function TermsModal({ open, onClose, onAgree, agreed, setAgreed, loading }) {
           <h2 className="text-[18px] sm:text-[20px] font-extrabold tracking-[0.12em]">
             TERMS & CONDITIONS
           </h2>
-          <p className="text-[13px] text-black/60 mt-2">Please review and accept to continue.</p>
+          <p className="text-[13px] text-black/60 mt-2">
+            Please review and accept to continue.
+          </p>
         </div>
 
         <div
@@ -1075,29 +1132,42 @@ function TermsModal({ open, onClose, onAgree, agreed, setAgreed, loading }) {
         >
           <p className="font-bold text-black/80 mb-2">Summary</p>
           <ul className="list-disc list-inside space-y-2">
-            <li>CheckIn supports student well-being using journaling and PHQ-9 self-assessment.</li>
             <li>
-              CheckIn is <span className="font-semibold">not</span> a diagnostic tool and does not
-              replace professional care.
+              CheckIn supports student well-being using journaling and PHQ-9
+              self-assessment.
             </li>
-            <li>Use the platform respectfully. Do not attempt unauthorized access or misuse.</li>
-            <li>If you are in immediate danger, contact emergency services or your local hotline.</li>
+            <li>
+              CheckIn is <span className="font-semibold">not</span> a diagnostic
+              tool and does not replace professional care.
+            </li>
+            <li>
+              Use the platform respectfully. Do not attempt unauthorized access
+              or misuse.
+            </li>
+            <li>
+              If you are in immediate danger, contact emergency services or your
+              local hotline.
+            </li>
           </ul>
 
           <div className="mt-5">
             <p className="font-bold text-black/80 mb-2">Full Terms</p>
             <p className="mb-3">
-              By using CheckIn, you agree to use the platform only for lawful and appropriate
-              purposes.
+              By using CheckIn, you agree to use the platform only for lawful
+              and appropriate purposes.
             </p>
             <p className="mb-3">
-              CheckIn may store and process information you provide to deliver features and improve
-              performance.
+              CheckIn may store and process information you provide to deliver
+              features and improve performance.
             </p>
             <p className="mb-3">
-              CheckIn is provided “as is.” We cannot guarantee uninterrupted availability.
+              CheckIn is provided “as is.” We cannot guarantee uninterrupted
+              availability.
             </p>
-            <p>We may update these terms when necessary. Continued use constitutes acceptance of updated terms.</p>
+            <p>
+              We may update these terms when necessary. Continued use
+              constitutes acceptance of updated terms.
+            </p>
           </div>
         </div>
 
@@ -1341,7 +1411,8 @@ export default function Login() {
           intent: "login",
           googleId: u?.uid,
           email: u?.email,
-          fullName: u?.displayName || u?.email?.split("@")?.[0] || "Google User",
+          fullName:
+            u?.displayName || u?.email?.split("@")?.[0] || "Google User",
         };
 
         const res = await fetch(`${API_BASE}/api/auth/google`, {
@@ -1408,7 +1479,10 @@ export default function Login() {
       <div className="mx-auto w-full max-w-[1500px] px-[clamp(16px,3.4vw,90px)] pt-6 sm:pt-10 lg:pt-[clamp(132px,4vh,72px)] pb-[clamp(22px,5vh,56px)]">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-[clamp(88px,3.2vw,64px)] lg:gap-x-[clamp(56px,7vw,160px)] items-start">
           {/* LEFT: LOGIN */}
-          <section className="w-full mx-auto lg:mx-0 lg:justify-self-start" style={{ maxWidth: "600px" }}>
+          <section
+            className="w-full mx-auto lg:mx-0 lg:justify-self-start"
+            style={{ maxWidth: "600px" }}
+          >
             <div className="relative  lg:gap-x-[clamp(56px,7vw,160px)] px-1 sm:px-0">
               <h1 className="text-[28px] sm:text-[36px] font-black tracking-[.22em] sm:tracking-[.26em] leading-tight text-black drop-shadow-sm">
                 LOGIN
@@ -1419,7 +1493,9 @@ export default function Login() {
 
               {successMessage ? (
                 <div className="mt-4 rounded-[16px] border-2 border-black bg-green-50 px-4 py-3 text-[13px] text-black">
-                  <div className="font-extrabold">Account creation successful</div>
+                  <div className="font-extrabold">
+                    Account creation successful
+                  </div>
                   <div className="mt-0.5 text-black/80">{successMessage}</div>
                 </div>
               ) : null}
@@ -1430,7 +1506,10 @@ export default function Login() {
                 </div>
               ) : null}
 
-              <form className="mt-6 flex flex-col gap-4" onSubmit={handleEmailLogin}>
+              <form
+                className="mt-6 flex flex-col gap-4"
+                onSubmit={handleEmailLogin}
+              >
                 <FieldInput
                   label="Email or Username"
                   value={form.emailOrUsername}
@@ -1472,7 +1551,11 @@ export default function Login() {
                 </div>
 
                 <div className="pt-1 flex flex-col gap-3">
-                  <PrimaryButton className="w-full" disabled={loading} type="submit">
+                  <PrimaryButton
+                    className="w-full"
+                    disabled={loading}
+                    type="submit"
+                  >
                     {loading ? (
                       <span className="inline-flex items-center gap-2">
                         <Spinner />
@@ -1514,7 +1597,10 @@ export default function Login() {
 
           {/* RIGHT: DOME (match signup) */}
           <section className="hidden lg:flex items-start justify-center self-stretch lg:pl-8 xl:pl-12">
-            <div className="w-full h-full flex items-start justify-center" style={{ minHeight: "620px" }}>
+            <div
+              className="w-full h-full flex items-start justify-center"
+              style={{ minHeight: "620px" }}
+            >
               <div
                 className="w-full"
                 style={{

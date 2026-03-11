@@ -1463,7 +1463,7 @@ function HistoryModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+          <div className="absolute inset-0 bg-black/25" onClick={onClose} />
 
           <motion.div
             role="dialog"
@@ -1798,7 +1798,7 @@ function TermsModal({ open, onAgree }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <div className="absolute inset-0 bg-black/45" />
+          <div className="absolute inset-0 bg-black/25" />
 
           <motion.div
             role="dialog"
@@ -2091,7 +2091,7 @@ function ServiceTutorialOverlay({
         type="button"
         aria-label="Skip tutorial"
         onClick={onSkip}
-        className="absolute inset-0 bg-black/45"
+        className="absolute inset-0 bg-black/25"
       />
 
       {rect && (

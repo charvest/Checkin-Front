@@ -110,7 +110,7 @@ function ServiceTutorialOverlay({
         type="button"
         aria-label="Skip tutorial"
         onClick={onSkip}
-        className="absolute inset-0 bg-black/45"
+        className="absolute inset-0 bg-black/25"
       />
 
       {rect && (
@@ -1667,11 +1667,7 @@ export default function PHQ9() {
         description:
           "This quick check-in reflects the last 2 weeks. It’s a screening tool — not a diagnosis.",
       },
-      {
-        targetRef: termsRef,
-        title: "Terms & Privacy",
-        description: "Open this to read details and accept before starting.",
-      },
+
       {
         targetRef: questionNavRef,
         title: "Navigate questions",
